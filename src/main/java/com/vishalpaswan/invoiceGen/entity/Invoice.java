@@ -29,6 +29,7 @@ public class Invoice {
     public static class Company{
         private String name;
         private String phone;
+        private String email;
         private String address;
     }
 
@@ -52,6 +53,5 @@ public class Invoice {
         private String name;
         private int quantity;
         private double rate;
-        private double amount;
     }
 }
