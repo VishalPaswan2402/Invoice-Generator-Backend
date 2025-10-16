@@ -1,5 +1,6 @@
 package com.vishalpaswan.invoiceGen.errorHandling;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,11 +21,18 @@ public class GlobalErrorHandling {
         });
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
+
     // handle all other errors
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneralError(Exception ex){
         Map<String,String> response=new HashMap<>();
         response.put("error",ex.getMessage());
         return new ResponseEntity<>(response,HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    // handle duplicate username
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<String> handleDuplicateKey(DuplicateKeyException ex){
+        return ResponseEntity.badRequest().body("Username already exist!");
     }
 }

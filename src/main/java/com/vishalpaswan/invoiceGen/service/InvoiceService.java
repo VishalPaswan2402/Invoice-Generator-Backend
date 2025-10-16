@@ -73,11 +73,8 @@ public class InvoiceService {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
 //        System.out.println(oldInvoice);
-        System.out.println("NEW Invoice");
-        System.out.println(newInvoice);
         newInvoice.setId(id);
         Invoice updateInvoice=invoiceRepository.save(newInvoice);
-        System.out.println("updated Invoice "+updateInvoice);
         return new ResponseEntity<>(updateInvoice,HttpStatus.OK);
     }
 
