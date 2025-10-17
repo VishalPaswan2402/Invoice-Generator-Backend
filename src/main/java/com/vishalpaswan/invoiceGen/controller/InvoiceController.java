@@ -4,12 +4,8 @@ import com.vishalpaswan.invoiceGen.entity.Invoice;
 import com.vishalpaswan.invoiceGen.service.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,40 +15,41 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
 
     // save new invoice
-    @PostMapping("/new-invoice")
-    public ResponseEntity<?> saveNewInvoice(@Valid @RequestBody Invoice invoice){
-        System.out.println("Received invoice : "+invoice);
-        return invoiceService.saveNewInvoice(invoice);
+    @PostMapping("/{companyOwnerId}/new-invoice")
+    public ResponseEntity<?> saveNewInvoice(@Valid @RequestBody Invoice invoice, @PathVariable String companyOwnerId) {
+        System.out.println("Received invoice : " + invoice);
+        System.out.println("CompanyId : " + companyOwnerId);
+        return invoiceService.saveNewInvoice(invoice, companyOwnerId);
     }
 
     // get invoice by id
-    @GetMapping("/view-invoice/{id}")
-    public ResponseEntity<?> getInvoiceById(@PathVariable String id){
-        return invoiceService.getInvoiceById(id);
+    @GetMapping("/{ownerId}/view-invoice/{invoiceId}")
+    public ResponseEntity<?> getInvoiceById(@PathVariable String invoiceId, @PathVariable String ownerId) {
+        return invoiceService.getInvoiceById(invoiceId, ownerId);
     }
 
     // get latest 20 invoice
-    @GetMapping("/latest-20-invoice")
-    public  ResponseEntity<?> getLatestInvoice(){
-        return invoiceService.getLatestInvoice();
+    @GetMapping("/{ownerId}/latest-20-invoice")
+    public ResponseEntity<?> getLatestInvoice(@PathVariable String ownerId) {
+        return invoiceService.getLatestInvoice(ownerId);
     }
 
     // get all invoice
-    @GetMapping("/all-invoices")
-    public ResponseEntity<?> getAllInvoice(){
-        return invoiceService.getAllInvoice();
+    @GetMapping("{ownerId}/all-invoices")
+    public ResponseEntity<?> getAllInvoice(@PathVariable String ownerId) {
+        return invoiceService.getAllInvoice(ownerId);
     }
 
     // delete invoice by id
-    @DeleteMapping("/delete-invoice/{id}")
-    public ResponseEntity<?> deleteInvoiceById(@PathVariable String id){
-        return invoiceService.deleteInvoiceById(id);
+    @DeleteMapping("{ownerId}/delete-invoice/{invoiceId}")
+    public ResponseEntity<?> deleteInvoiceById(@PathVariable String invoiceId, @PathVariable String ownerId) {
+        return invoiceService.deleteInvoiceById(invoiceId, ownerId);
     }
 
     // update invoice by id
-    @PutMapping("/update-invoice/{id}")
-    public ResponseEntity<?> updateInvoice(@Valid @RequestBody Invoice newInvoice,@PathVariable String id){
-        return invoiceService.updateInvoice(newInvoice,id);
+    @PutMapping("{ownerId}/update-invoice/{invoiceId}")
+    public ResponseEntity<?> updateInvoice(@Valid @RequestBody Invoice newInvoice, @PathVariable String ownerId, @PathVariable String invoiceId) {
+        return invoiceService.updateInvoice(newInvoice, ownerId, invoiceId);
     }
 
 }

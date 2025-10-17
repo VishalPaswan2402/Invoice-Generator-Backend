@@ -14,25 +14,26 @@ import java.util.Map;
 public class GlobalErrorHandling {
     // Handle @Valid validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidationError(MethodArgumentNotValidException ex){
-        Map<String,String> errors=new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error->{
-            errors.put(error.getField(),error.getDefaultMessage());
+    public ResponseEntity<?> handleValidationError(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            errors.put(error.getField(), error.getDefaultMessage());
         });
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
     // handle all other errors
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> handleGeneralError(Exception ex){
-        Map<String,String> response=new HashMap<>();
-        response.put("error",ex.getMessage());
-        return new ResponseEntity<>(response,HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<?> handleGeneralError(Exception ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", ex.getMessage());
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     // handle duplicate username
     @ExceptionHandler(DuplicateKeyException.class)
-    public ResponseEntity<String> handleDuplicateKey(DuplicateKeyException ex){
-        return ResponseEntity.badRequest().body("Username already exist!");
+    public ResponseEntity<ApiError> handleDuplicateKey(DuplicateKeyException ex) {
+        ApiError apiError = new ApiError("Username already exist." + ex.getMessage(), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(apiError, apiError.getStatusCode());
     }
 }
