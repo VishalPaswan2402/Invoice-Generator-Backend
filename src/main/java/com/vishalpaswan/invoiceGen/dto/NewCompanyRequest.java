@@ -1,22 +1,17 @@
-package com.vishalpaswan.invoiceGen.entity;
+package com.vishalpaswan.invoiceGen.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
-import org.springframework.data.mongodb.core.mapping.Document;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-@Document(collection = "companies")
-public class Companies {
-    @Id
-    private String id;
-
+public class NewCompanyRequest {
     @Valid
     @NotBlank(message = "Company name missing.")
     private String companyName;
@@ -36,10 +31,5 @@ public class Companies {
     @Valid
     @NotBlank(message = "Email is missing.")
     private String email;
-
-    @DBRef(lazy = true)
-    @JsonIgnore
-    @ToString.Exclude
-    private Users owner;
 
 }

@@ -1,11 +1,21 @@
 package com.vishalpaswan.invoiceGen.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
+@AllArgsConstructor
+@NoArgsConstructor
 public class LoginRequest {
+    @Valid
+    @NotBlank(message = "Username is missing.")
     private String username;
+
+    @Valid
+    @NotBlank(message = "Password is missing.")
     private String password;
+
 }

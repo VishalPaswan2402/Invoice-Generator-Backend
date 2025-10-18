@@ -1,17 +1,58 @@
 package com.vishalpaswan.invoiceGen.dto;
 
-import com.vishalpaswan.invoiceGen.entity.Companies;
-import com.vishalpaswan.invoiceGen.entity.Invoice;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Component
+@Builder
 public class InvoiceResponse {
-    private Companies companyDetails;
-    private Invoice invoiceDetails;
+    //    private Companies companyDetails;
+//    private Invoice invoiceDetails;
+
+    private String id;
+    private BillingDetails billingDetails;
+    private InvoiceDetails invoiceDetails;
+    private List<ItemsDetails> itemsDetails;
+    private String paymentMode;
+    private Integer grandTotal;
+    private Integer paidAmount;
+    private Integer dueBalance;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BillingDetails {
+        private String name;
+        private String phone;
+        private String email;
+        private String address;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class InvoiceDetails {
+        private String invNumber;
+        private String date;
+        private String dueDate;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class ItemsDetails {
+        private String name;
+        private Integer quantity;
+        private Double rate;
+    }
+
 }

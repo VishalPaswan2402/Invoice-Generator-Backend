@@ -1,6 +1,6 @@
 package com.vishalpaswan.invoiceGen.controller;
 
-import com.vishalpaswan.invoiceGen.entity.Invoice;
+import com.vishalpaswan.invoiceGen.dto.InvoiceRequest;
 import com.vishalpaswan.invoiceGen.service.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +16,10 @@ public class InvoiceController {
 
     // save new invoice
     @PostMapping("/{companyOwnerId}/new-invoice")
-    public ResponseEntity<?> saveNewInvoice(@Valid @RequestBody Invoice invoice, @PathVariable String companyOwnerId) {
-        System.out.println("Received invoice : " + invoice);
+    public ResponseEntity<?> saveNewInvoice(@Valid @RequestBody InvoiceRequest invoiceRequest, @PathVariable String companyOwnerId) {
+        System.out.println("Received invoice : " + invoiceRequest);
         System.out.println("CompanyId : " + companyOwnerId);
-        return invoiceService.saveNewInvoice(invoice, companyOwnerId);
+        return invoiceService.saveNewInvoice(invoiceRequest, companyOwnerId);
     }
 
     // get invoice by id
@@ -48,7 +48,7 @@ public class InvoiceController {
 
     // update invoice by id
     @PutMapping("{ownerId}/update-invoice/{invoiceId}")
-    public ResponseEntity<?> updateInvoice(@Valid @RequestBody Invoice newInvoice, @PathVariable String ownerId, @PathVariable String invoiceId) {
+    public ResponseEntity<?> updateInvoice(@Valid @RequestBody InvoiceRequest newInvoice, @PathVariable String ownerId, @PathVariable String invoiceId) {
         return invoiceService.updateInvoice(newInvoice, ownerId, invoiceId);
     }
 

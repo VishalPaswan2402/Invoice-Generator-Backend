@@ -1,12 +1,12 @@
 package com.vishalpaswan.invoiceGen.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,13 +23,16 @@ public class Users implements UserDetails {
     @Id
     private String id;
 
+    @Valid
     @Indexed(unique = true)
     @NotBlank(message = "Username is required")
     private String username;
 
+    @Valid
     @NotBlank(message = "Email is required")
     private String email;
 
+    @Valid
     @NotBlank(message = "Password is required")
     private String password;
 
@@ -39,8 +42,10 @@ public class Users implements UserDetails {
     @Builder.Default
     private int totalCompany = 0;
 
-//    @DBRef(lazy = true)
-//    private Companies company;
+    @DBRef(lazy = true)
+    @JsonIgnore
+    @ToString.Exclude
+    private Companies company;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

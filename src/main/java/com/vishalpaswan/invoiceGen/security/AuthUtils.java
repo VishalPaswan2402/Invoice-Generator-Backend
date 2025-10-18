@@ -25,7 +25,7 @@ public class AuthUtils {
                 .subject(user.getUsername())
                 .claim("userId", user.getId())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 10))
+                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
                 .signWith(getSecretKey())
                 .compact();
     }
@@ -36,7 +36,7 @@ public class AuthUtils {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        
+
         return claims.getSubject();
     }
 }

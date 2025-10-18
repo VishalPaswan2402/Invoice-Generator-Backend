@@ -1,9 +1,12 @@
 package com.vishalpaswan.invoiceGen.service;
 
+import com.vishalpaswan.invoiceGen.dto.InvoiceRequest;
 import com.vishalpaswan.invoiceGen.dto.InvoiceResponse;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import com.vishalpaswan.invoiceGen.entity.Invoice;
 import com.vishalpaswan.invoiceGen.entity.Users;
+import com.vishalpaswan.invoiceGen.mappersUtills.InvoiceRequestMapper;
+import com.vishalpaswan.invoiceGen.mappersUtills.InvoiceResponseMapper;
 import com.vishalpaswan.invoiceGen.repository.CompaniesRepository;
 import com.vishalpaswan.invoiceGen.repository.InvoiceRepository;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
@@ -25,8 +28,10 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final UserRepository userRepository;
     private final CompaniesRepository companiesRepository;
-    private final InvoiceResponse invoiceResponse;
+    private final InvoiceResponseMapper invoiceResponseMapper;
+    private final InvoiceRequestMapper invoiceRequestMapper;
 
+    // generate invoice number
     public String generateInvoiceNumber(int previousTotalInvoices) {
         LocalDate now = LocalDate.now();
         String year = String.valueOf(now.getYear()).substring(2);
@@ -35,9 +40,9 @@ public class InvoiceService {
         return "INV-" + year + month + sequence;
     }
 
-    // save invoice
+    // save new invoice
 //    @Transactional
-    public ResponseEntity<?> saveNewInvoice(Invoice invoice, String companyOwnerId) {
+    public ResponseEntity<?> saveNewInvoice(InvoiceRequest invoiceRequest, String companyOwnerId) {
         Optional<Users> companyOwner = userRepository.findById(companyOwnerId);
         if (companyOwner.isEmpty()) {
             return new ResponseEntity<>("Please create your account.", HttpStatus.BAD_REQUEST);
@@ -48,95 +53,127 @@ public class InvoiceService {
         }
         Companies companyDetails = companyData.get();
         Users userData = companyOwner.get();
-//        int newInvoiceCount = userData.getTotalInvoices() + 1;
-//        String newInvoiceNumber = generateInvoiceNumber(newInvoiceCount);
-        invoice.setCompanyId(companyDetails.getId());
-        invoice.setOwnerId(companyOwnerId);
-//        invoice.getInvoiceDetails().setInvNumber(newInvoiceNumber);
-        Invoice savedInvoice = invoiceRepository.save(invoice);
-//        userData.setTotalInvoices(newInvoiceCount);
+        int newInvoiceCount = userData.getTotalInvoices() + 1;
+        String newInvoiceNumber = generateInvoiceNumber(newInvoiceCount);
+        int grandTotal = invoiceRequest.getItemsDetails().stream()
+                .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
+                .sum();
+        int paidAmount = invoiceRequest.getPaidAmount();
+        int dueBalance = grandTotal - paidAmount;
+        Invoice newInvoice = invoiceRequestMapper.mapToInvoice(invoiceRequest);
+        newInvoice.setGrandTotal(grandTotal);
+        newInvoice.setDueBalance(dueBalance);
+        newInvoice.setCompany(companyDetails);
+        newInvoice.getInvoiceDetails().setInvNumber(newInvoiceNumber);
+        Invoice savedInvoice = invoiceRepository.save(newInvoice);
+        userData.setTotalInvoices(newInvoiceCount);
         userRepository.save(userData);
         return new ResponseEntity<>(savedInvoice, HttpStatus.CREATED);
     }
 
     // fetch invoice
-    public ResponseEntity<?> getInvoiceById(String invoiceId, String ownerId) {
-        Optional<Companies> companyData = companiesRepository.findByOwnerId(ownerId);
-        if (companyData.isEmpty()) {
-            return new ResponseEntity<>("Company data is not available!", HttpStatus.BAD_REQUEST);
-        }
-        Optional<Invoice> invoice = invoiceRepository.findById(invoiceId);
-        if (invoice.isEmpty()) {
+    public ResponseEntity<?> getInvoiceById(String invoiceId, String userId) {
+        Optional<Invoice> toFetchInvoice = invoiceRepository.findById(invoiceId);
+        if (toFetchInvoice.isEmpty()) {
             return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
         }
-        Companies companyDetails = companyData.get();
-        Invoice invoiceDetails = invoice.get();
-        if (!companyDetails.getId().equals(invoiceDetails.getCompanyId())) {
+        Invoice invoiceDetails = toFetchInvoice.get();
+        String companyId = invoiceDetails.getCompany().getId();
+        Optional<Users> user = userRepository.findById(userId);
+        if (user.isEmpty()) {
             return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
         }
-        InvoiceResponse response = new InvoiceResponse(companyData.get(), invoice.get());
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        String userCompanyId = user.get().getCompany().getId();
+        if (!userCompanyId.equals(companyId)) {
+            return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
+        }
+        InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(invoiceDetails);
+        return new ResponseEntity<>(invoiceResponse, HttpStatus.OK);
     }
 
     // fetch latest 20 invoice
     public ResponseEntity<?> getLatestInvoice(String ownerId) {
-        Optional<Companies> companyDetails = companiesRepository.findByOwnerId(ownerId);
-        if (companyDetails.isEmpty()) {
-            return new ResponseEntity<>("Create company.", HttpStatus.BAD_REQUEST);
+        Optional<Users> user = userRepository.findById(ownerId);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>("Create account.", HttpStatus.BAD_REQUEST);
         }
-        String companyId = companyDetails.get().getId();
+        Users userData = user.get();
+        if (userData.getTotalCompany() == 0) {
+            return new ResponseEntity<>("Create company account.", HttpStatus.BAD_REQUEST);
+        }
+        String companyId = userData.getCompany().getId();
         Pageable topTwenty = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
         List<Invoice> latestInvoice = invoiceRepository.findByCompanyId(companyId, topTwenty).getContent();
         if (latestInvoice.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>("No invoice found.", HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>(latestInvoice, HttpStatus.OK);
+        List<InvoiceResponse> responseList = latestInvoice.stream()
+                .map(invoiceResponseMapper::mapToResponse)
+                .toList();
+        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 
     // get all invoice
     public ResponseEntity<?> getAllInvoice(String ownerId) {
-        Optional<Companies> companyData = companiesRepository.findByOwnerId(ownerId);
-        if (companyData.isEmpty()) {
-            return new ResponseEntity<>("Company new company!", HttpStatus.BAD_REQUEST);
+        Optional<Users> user = userRepository.findById(ownerId);
+        if (user.isEmpty()) {
+            return new ResponseEntity<>("Create account!", HttpStatus.BAD_REQUEST);
         }
-        List<Invoice> allInvoice = invoiceRepository.findByCompanyId(companyData.get().getId(), Sort.by(Sort.Direction.DESC, "id"));
+        Users userData = user.get();
+        if (userData.getTotalCompany() == 0) {
+            return new ResponseEntity<>("Create company account.", HttpStatus.BAD_REQUEST);
+        }
+        String companyId = userData.getCompany().getId();
+        List<Invoice> allInvoice = invoiceRepository.findByCompanyId(companyId, Sort.by(Sort.Direction.DESC, "id"));
         if (allInvoice.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>("No invoice found.", HttpStatus.NO_CONTENT);
         }
-        return new ResponseEntity<>(allInvoice, HttpStatus.OK);
+        List<InvoiceResponse> responseList = allInvoice.stream()
+                .map(invoiceResponseMapper::mapToResponse)
+                .toList();
+        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 
     // delete invoice by id
     public ResponseEntity<?> deleteInvoiceById(String invoiceId, String ownerId) {
         Optional<Invoice> findInvoice = invoiceRepository.findById(invoiceId);
         if (findInvoice.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Invoice not found.", HttpStatus.NOT_FOUND);
         }
-        if (!findInvoice.get().getOwnerId().equals(ownerId)) {
+        String invoiceOwnerId = findInvoice.get().getCompany().getOwner().getId();
+        if (!invoiceOwnerId.equals(ownerId)) {
             return new ResponseEntity<>("Not allowed to delete!", HttpStatus.UNAUTHORIZED);
         }
         invoiceRepository.deleteById(invoiceId);
-        return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>("Invoice deleted successfully.", HttpStatus.OK);
     }
 
     // update or edit invoice
-    public ResponseEntity<?> updateInvoice(Invoice newInvoice, String ownerId, String invoiceId) {
+    public ResponseEntity<?> updateInvoice(InvoiceRequest newInvoice, String ownerId, String invoiceId) {
         Optional<Invoice> oldInvoice = invoiceRepository.findById(invoiceId);
         if (oldInvoice.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Invoice not found.", HttpStatus.BAD_REQUEST);
         }
         Invoice oldDetails = oldInvoice.get();
-        if (!oldDetails.getOwnerId().equals(ownerId)) {
+        if (!oldDetails.getCompany().getOwner().getId().equals(ownerId)) {
             return new ResponseEntity<>("Not have permission to delete!", HttpStatus.UNAUTHORIZED);
         }
-        String companyId = oldDetails.getCompanyId();
+        String companyId = oldDetails.getCompany().getId();
         String invoiceNumber = oldDetails.getInvoiceDetails().getInvNumber();
-        newInvoice.setId(invoiceId);
-        newInvoice.setOwnerId(ownerId);
-        newInvoice.setCompanyId(companyId);
-        newInvoice.getInvoiceDetails().setInvNumber(invoiceNumber);
-        Invoice updateInvoice = invoiceRepository.save(newInvoice);
-        return new ResponseEntity<>(updateInvoice, HttpStatus.OK);
+
+        int grandTotal = newInvoice.getItemsDetails().stream()
+                .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
+                .sum();
+        int paidAmount = newInvoice.getPaidAmount();
+        int dueBalance = grandTotal - paidAmount;
+        Invoice updatedInvoice = invoiceRequestMapper.mapToInvoice(newInvoice);
+        updatedInvoice.setGrandTotal(grandTotal);
+        updatedInvoice.setDueBalance(dueBalance);
+        updatedInvoice.setCompany(oldDetails.getCompany());
+        updatedInvoice.getInvoiceDetails().setInvNumber(oldDetails.getInvoiceDetails().getInvNumber());
+        updatedInvoice.setId(oldDetails.getId());
+        Invoice savedInvoice = invoiceRepository.save(updatedInvoice);
+        return new ResponseEntity<>("Invoice updated successfully.", HttpStatus.OK);
     }
 
 }
