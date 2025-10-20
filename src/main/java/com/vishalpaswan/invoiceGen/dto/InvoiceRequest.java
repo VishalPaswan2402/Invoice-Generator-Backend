@@ -61,7 +61,7 @@ public class InvoiceRequest {
     @NoArgsConstructor
     @Builder
     public static class InvoiceDetails {
-        private String invNumber; // generated automatically
+        //        private String invNumber; // generated automatically
         @NotBlank(message = "Date is required")
         private String date;
 

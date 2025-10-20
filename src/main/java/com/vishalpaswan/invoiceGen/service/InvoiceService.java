@@ -5,6 +5,7 @@ import com.vishalpaswan.invoiceGen.dto.InvoiceResponse;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import com.vishalpaswan.invoiceGen.entity.Invoice;
 import com.vishalpaswan.invoiceGen.entity.Users;
+import com.vishalpaswan.invoiceGen.inputValidationCheck.GenerateInvNumber;
 import com.vishalpaswan.invoiceGen.mappersUtills.InvoiceRequestMapper;
 import com.vishalpaswan.invoiceGen.mappersUtills.InvoiceResponseMapper;
 import com.vishalpaswan.invoiceGen.repository.CompaniesRepository;
@@ -54,7 +55,8 @@ public class InvoiceService {
         Companies companyDetails = companyData.get();
         Users userData = companyOwner.get();
         int newInvoiceCount = userData.getTotalInvoices() + 1;
-        String newInvoiceNumber = generateInvoiceNumber(newInvoiceCount);
+//        String newInvoiceNumber = generateInvoiceNumber(newInvoiceCount);
+        String newInvoiceNumber = GenerateInvNumber.generateInvoiceNumber(newInvoiceCount);
         int grandTotal = invoiceRequest.getItemsDetails().stream()
                 .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
                 .sum();
@@ -68,7 +70,13 @@ public class InvoiceService {
         Invoice savedInvoice = invoiceRepository.save(newInvoice);
         userData.setTotalInvoices(newInvoiceCount);
         userRepository.save(userData);
-        return new ResponseEntity<>(savedInvoice, HttpStatus.CREATED);
+        InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(savedInvoice);
+        invoiceResponse.setCompanyDetails(new InvoiceResponse.CompanyDetails());
+        invoiceResponse.getCompanyDetails().setName(savedInvoice.getCompany().getCompanyName());
+        invoiceResponse.getCompanyDetails().setContact(savedInvoice.getCompany().getContact());
+        invoiceResponse.getCompanyDetails().setEmail(savedInvoice.getCompany().getEmail());
+        invoiceResponse.getCompanyDetails().setAddress(savedInvoice.getCompany().getAddress());
+        return new ResponseEntity<>(invoiceResponse, HttpStatus.CREATED);
     }
 
     // fetch invoice
@@ -78,16 +86,29 @@ public class InvoiceService {
             return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
         }
         Invoice invoiceDetails = toFetchInvoice.get();
+        Companies company = invoiceDetails.getCompany();
         String companyId = invoiceDetails.getCompany().getId();
         Optional<Users> user = userRepository.findById(userId);
         if (user.isEmpty()) {
             return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
         }
-        String userCompanyId = user.get().getCompany().getId();
-        if (!userCompanyId.equals(companyId)) {
+        boolean isFind = false;
+        List<Companies> companiesList = user.get().getCompanies();
+        for (Companies companies : companiesList) {
+            if (companies.getId().equals(companyId)) {
+                isFind = true;
+                break;
+            }
+        }
+        if (!isFind) {
             return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
         }
         InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(invoiceDetails);
+        invoiceResponse.setCompanyDetails(new InvoiceResponse.CompanyDetails());
+        invoiceResponse.getCompanyDetails().setName(company.getCompanyName());
+        invoiceResponse.getCompanyDetails().setEmail(company.getEmail());
+        invoiceResponse.getCompanyDetails().setAddress(company.getAddress());
+        invoiceResponse.getCompanyDetails().setContact(company.getContact());
         return new ResponseEntity<>(invoiceResponse, HttpStatus.OK);
     }
 
@@ -99,13 +120,13 @@ public class InvoiceService {
         }
         Users userData = user.get();
         if (userData.getTotalCompany() == 0) {
-            return new ResponseEntity<>("Create company account.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Create company account.", HttpStatus.CONFLICT);
         }
-        String companyId = userData.getCompany().getId();
+        String companyId = userData.getCompanies().getFirst().getId();
         Pageable topTwenty = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
         List<Invoice> latestInvoice = invoiceRepository.findByCompanyId(companyId, topTwenty).getContent();
         if (latestInvoice.isEmpty()) {
-            return new ResponseEntity<>("No invoice found.", HttpStatus.NO_CONTENT);
+            return new ResponseEntity<>(latestInvoice, HttpStatus.NO_CONTENT);
         }
         List<InvoiceResponse> responseList = latestInvoice.stream()
                 .map(invoiceResponseMapper::mapToResponse)
@@ -114,7 +135,7 @@ public class InvoiceService {
     }
 
     // get all invoice
-    public ResponseEntity<?> getAllInvoice(String ownerId) {
+    public ResponseEntity<?> getAllInvoice(String ownerId, String companyId) {
         Optional<Users> user = userRepository.findById(ownerId);
         if (user.isEmpty()) {
             return new ResponseEntity<>("Create account!", HttpStatus.BAD_REQUEST);
@@ -123,7 +144,17 @@ public class InvoiceService {
         if (userData.getTotalCompany() == 0) {
             return new ResponseEntity<>("Create company account.", HttpStatus.BAD_REQUEST);
         }
-        String companyId = userData.getCompany().getId();
+        boolean isFind = false;
+        List<Companies> companiesList = userData.getCompanies();
+        for (Companies companies1 : companiesList) {
+            if (companies1.getId().equals(companyId)) {
+                isFind = true;
+                break;
+            }
+        }
+        if (!isFind) {
+            return new ResponseEntity<>("This company not registered.", HttpStatus.BAD_REQUEST);
+        }
         List<Invoice> allInvoice = invoiceRepository.findByCompanyId(companyId, Sort.by(Sort.Direction.DESC, "id"));
         if (allInvoice.isEmpty()) {
             return new ResponseEntity<>("No invoice found.", HttpStatus.NO_CONTENT);

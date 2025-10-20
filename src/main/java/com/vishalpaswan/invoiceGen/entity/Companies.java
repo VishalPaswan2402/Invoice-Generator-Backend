@@ -1,8 +1,6 @@
 package com.vishalpaswan.invoiceGen.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
@@ -16,25 +14,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Companies {
     @Id
     private String id;
-
-    @Valid
-    @NotBlank(message = "Company name missing.")
     private String companyName;
-
-    @Valid
-    @NotBlank(message = "Owner name is missing,")
     private String ownerName;
-
-    @Valid
-    @NotBlank(message = "Contact number is missing.")
     private String contact;
-
-    @Valid
-    @NotBlank(message = "Address is missing.")
     private String address;
-
-    @Valid
-    @NotBlank(message = "Email is missing.")
     private String email;
 
     @DBRef(lazy = true)

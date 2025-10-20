@@ -12,10 +12,8 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class InvoiceResponse {
-    //    private Companies companyDetails;
-//    private Invoice invoiceDetails;
-
     private String id;
+    private CompanyDetails companyDetails;
     private BillingDetails billingDetails;
     private InvoiceDetails invoiceDetails;
     private List<ItemsDetails> itemsDetails;
@@ -23,6 +21,17 @@ public class InvoiceResponse {
     private Integer grandTotal;
     private Integer paidAmount;
     private Integer dueBalance;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class CompanyDetails {
+        private String name;
+        private String contact;
+        private String email;
+        private String address;
+    }
 
     @Data
     @NoArgsConstructor

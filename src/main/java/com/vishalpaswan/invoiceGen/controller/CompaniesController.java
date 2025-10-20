@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/invoice-gen/api")
 @RequiredArgsConstructor
+@CrossOrigin("*")
 public class CompaniesController {
     private final CompaniesService companiesService;
 
@@ -23,6 +24,12 @@ public class CompaniesController {
     @GetMapping("/{ownerId}/{companyId}/view-company")
     public ResponseEntity<?> getCompanyDetails(@PathVariable String ownerId, @PathVariable String companyId) {
         return companiesService.getCompanyDetails(ownerId, companyId);
+    }
+
+    // get all company belonging to particular user
+    @GetMapping("/{ownerId}/all-company")
+    public ResponseEntity<?> getAllCompany(@PathVariable String ownerId) {
+        return companiesService.getAllCompany(ownerId);
     }
 
 }

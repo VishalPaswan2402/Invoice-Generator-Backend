@@ -24,19 +24,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     // login
-    public LoginResponse loginUser(LoginRequest loginRequest) {
+    public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
         var authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
         );
-
         Users user = (Users) authentication.getPrincipal();
         String token = authUtils.generateAccessToken(user);
-        return LoginResponse.builder()
+        LoginResponse loginResponse = LoginResponse.builder()
                 .jwt(token)
                 .userId(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .build();
+        return new ResponseEntity<>(loginResponse, HttpStatus.OK);
     }
 
     // signup
@@ -56,6 +56,17 @@ public class AuthService {
                 .email(signupRequest.getEmail())
                 .build()
         );
-        return new ResponseEntity<>("User created successfully.", HttpStatus.OK);
+        var authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(savedUser.getUsername(), signupRequest.getPassword())
+        );
+        Users user = (Users) authentication.getPrincipal();
+        String token = authUtils.generateAccessToken(user);
+        LoginResponse signupResponse = LoginResponse.builder()
+                .jwt(token)
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .build();
+        return new ResponseEntity<>(signupResponse, HttpStatus.CREATED);
     }
 }

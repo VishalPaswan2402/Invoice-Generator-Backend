@@ -9,12 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CompanyResponse {
+public class AllCompanyList {
     private String id;
     private String companyName;
-    private String ownerName;
-    private String contact;
     private String address;
+    private String contact;
     private String email;
-    private String invNumber;
 }

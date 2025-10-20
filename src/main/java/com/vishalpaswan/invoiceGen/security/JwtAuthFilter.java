@@ -35,6 +35,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 return;
             }
 
+            if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                return;
+            }
+
             String token = requestTokenHeader.split("Bearer ")[1];
             String username = authUtils.getUsernameFromToken(token);
 

@@ -11,19 +11,18 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/invoice-gen/api")
 @CrossOrigin("*")
+//@CrossOrigin(origins = "http://localhost:5173")
 public class InvoiceController {
     private final InvoiceService invoiceService;
 
     // save new invoice
     @PostMapping("/{companyOwnerId}/new-invoice")
     public ResponseEntity<?> saveNewInvoice(@Valid @RequestBody InvoiceRequest invoiceRequest, @PathVariable String companyOwnerId) {
-        System.out.println("Received invoice : " + invoiceRequest);
-        System.out.println("CompanyId : " + companyOwnerId);
         return invoiceService.saveNewInvoice(invoiceRequest, companyOwnerId);
     }
 
     // get invoice by id
-    @GetMapping("/{ownerId}/view-invoice/{invoiceId}")
+    @GetMapping("/{ownerId}/{invoiceId}/view-invoice")
     public ResponseEntity<?> getInvoiceById(@PathVariable String invoiceId, @PathVariable String ownerId) {
         return invoiceService.getInvoiceById(invoiceId, ownerId);
     }
@@ -35,19 +34,19 @@ public class InvoiceController {
     }
 
     // get all invoice
-    @GetMapping("{ownerId}/all-invoices")
-    public ResponseEntity<?> getAllInvoice(@PathVariable String ownerId) {
-        return invoiceService.getAllInvoice(ownerId);
+    @GetMapping("{ownerId}/{companyId}/all-invoices")
+    public ResponseEntity<?> getAllInvoice(@PathVariable String ownerId, @PathVariable String companyId) {
+        return invoiceService.getAllInvoice(ownerId, companyId);
     }
 
     // delete invoice by id
-    @DeleteMapping("{ownerId}/delete-invoice/{invoiceId}")
+    @DeleteMapping("{ownerId}/{invoiceId}/delete-invoice")
     public ResponseEntity<?> deleteInvoiceById(@PathVariable String invoiceId, @PathVariable String ownerId) {
         return invoiceService.deleteInvoiceById(invoiceId, ownerId);
     }
 
     // update invoice by id
-    @PutMapping("{ownerId}/update-invoice/{invoiceId}")
+    @PutMapping("{ownerId}/{invoiceId}/update-invoice")
     public ResponseEntity<?> updateInvoice(@Valid @RequestBody InvoiceRequest newInvoice, @PathVariable String ownerId, @PathVariable String invoiceId) {
         return invoiceService.updateInvoice(newInvoice, ownerId, invoiceId);
     }
