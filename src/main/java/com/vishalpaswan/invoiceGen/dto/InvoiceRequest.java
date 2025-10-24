@@ -28,6 +28,9 @@ public class InvoiceRequest {
     @NotNull(message = "Items cannot be empty")
     private List<ItemsDetails> itemsDetails;
 
+    @NotNull(message = "Payment status is missing.")
+    private boolean dueClear;
+
     @Valid
     @NotBlank(message = "Payment mode is required")
     private String paymentMode;
@@ -84,5 +87,7 @@ public class InvoiceRequest {
         @NotNull(message = "Rate is required")
         @Min(value = 0, message = "Rate cannot be negative")
         private Double rate;
+
+        private String description;
     }
 }

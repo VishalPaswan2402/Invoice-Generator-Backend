@@ -23,6 +23,7 @@ public class Invoice {
     private Integer grandTotal;
     private Integer paidAmount;
     private Integer dueBalance;
+    private boolean dueClear;
 
     @Data
     @AllArgsConstructor
@@ -53,6 +54,7 @@ public class Invoice {
         private String name;
         private Integer quantity;
         private Double rate;
+        private String description;
     }
 
     @DBRef(lazy = true)

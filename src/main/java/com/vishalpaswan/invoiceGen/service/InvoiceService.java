@@ -67,6 +67,7 @@ public class InvoiceService {
         newInvoice.setDueBalance(dueBalance);
         newInvoice.setCompany(companyDetails);
         newInvoice.getInvoiceDetails().setInvNumber(newInvoiceNumber);
+        newInvoice.setDueClear(dueBalance == 0 || invoiceRequest.isDueClear());
         Invoice savedInvoice = invoiceRepository.save(newInvoice);
         userData.setTotalInvoices(newInvoiceCount);
         userRepository.save(userData);
@@ -185,6 +186,11 @@ public class InvoiceService {
         if (oldInvoice.isEmpty()) {
             return new ResponseEntity<>("Invoice not found.", HttpStatus.BAD_REQUEST);
         }
+        System.out.println("New update : ");
+        System.out.println(newInvoice);
+        if (newInvoice.getItemsDetails().isEmpty()) {
+            return new ResponseEntity<>("No items found in updated invoice.", HttpStatus.BAD_REQUEST);
+        }
         Invoice oldDetails = oldInvoice.get();
         if (!oldDetails.getCompany().getOwner().getId().equals(ownerId)) {
             return new ResponseEntity<>("Not have permission to delete!", HttpStatus.UNAUTHORIZED);
@@ -200,6 +206,7 @@ public class InvoiceService {
         Invoice updatedInvoice = invoiceRequestMapper.mapToInvoice(newInvoice);
         updatedInvoice.setGrandTotal(grandTotal);
         updatedInvoice.setDueBalance(dueBalance);
+        updatedInvoice.setDueClear(dueBalance == 0 || newInvoice.isDueClear());
         updatedInvoice.setCompany(oldDetails.getCompany());
         updatedInvoice.getInvoiceDetails().setInvNumber(oldDetails.getInvoiceDetails().getInvNumber());
         updatedInvoice.setId(oldDetails.getId());

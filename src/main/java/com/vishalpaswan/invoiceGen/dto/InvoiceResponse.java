@@ -21,6 +21,7 @@ public class InvoiceResponse {
     private Integer grandTotal;
     private Integer paidAmount;
     private Integer dueBalance;
+    private boolean dueClear;
 
     @Data
     @NoArgsConstructor
@@ -62,6 +63,7 @@ public class InvoiceResponse {
         private String name;
         private Integer quantity;
         private Double rate;
+        private String description;
     }
 
 }
