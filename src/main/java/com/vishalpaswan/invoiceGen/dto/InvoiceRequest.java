@@ -28,6 +28,7 @@ public class InvoiceRequest {
     @NotNull(message = "Items cannot be empty")
     private List<ItemsDetails> itemsDetails;
 
+    @Valid
     @NotNull(message = "Payment status is missing.")
     private boolean dueClear;
 
