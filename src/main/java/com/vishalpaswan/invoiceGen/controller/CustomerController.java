@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 public class CustomerController {
     private final CustomerService customerService;
 
-    @GetMapping("/{invoiceId}")
+    @GetMapping("/{invoiceId}/view")
     public ResponseEntity<?> customerInvoiceView(@PathVariable String invoiceId) {
         return customerService.customerInvoiceView(invoiceId);
     }
