@@ -16,5 +16,5 @@ public class CompanyResponse {
     private String contact;
     private String address;
     private String email;
-    private String invNumber;
+    private long totalInvoice;
 }

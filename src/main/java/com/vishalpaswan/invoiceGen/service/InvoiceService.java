@@ -12,17 +12,21 @@ import com.vishalpaswan.invoiceGen.repository.CompaniesRepository;
 import com.vishalpaswan.invoiceGen.repository.InvoiceRepository;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InvoiceService {
@@ -32,186 +36,389 @@ public class InvoiceService {
     private final InvoiceResponseMapper invoiceResponseMapper;
     private final InvoiceRequestMapper invoiceRequestMapper;
 
-    // generate invoice number
-    public String generateInvoiceNumber(int previousTotalInvoices) {
-        LocalDate now = LocalDate.now();
-        String year = String.valueOf(now.getYear()).substring(2);
-        String month = String.format("%02d", now.getMonthValue());
-        String sequence = String.format("%02d", previousTotalInvoices);
-        return "INV-" + year + month + sequence;
-    }
-
     // save new invoice
-//    @Transactional
+    @Transactional
     public ResponseEntity<?> saveNewInvoice(InvoiceRequest invoiceRequest, String companyOwnerId) {
-        Optional<Users> companyOwner = userRepository.findById(companyOwnerId);
-        if (companyOwner.isEmpty()) {
-            return new ResponseEntity<>("Please create your account.", HttpStatus.BAD_REQUEST);
+        try {
+            // Validate input
+            if (invoiceRequest == null || companyOwnerId == null || companyOwnerId.isBlank()) {
+                log.warn("Invalid invoice request or missing company owner ID.");
+                return ResponseEntity.badRequest().body("Invalid request data.");
+            }
+
+            // Fetch company owner
+            Optional<Users> ownerOpt = userRepository.findById(companyOwnerId);
+            if (ownerOpt.isEmpty()) {
+                log.warn("User not found for ID: {}", companyOwnerId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Please create your account first.");
+            }
+
+            Users owner = ownerOpt.get();
+
+            // Fetch associated company
+            Optional<Companies> companyOpt = companiesRepository.findByOwnerId(companyOwnerId);
+            if (companyOpt.isEmpty()) {
+                log.warn("No company found for user {}", companyOwnerId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Please add your company details first.");
+            }
+
+            Companies company = companyOpt.get();
+
+            // Generate invoice details
+            int newInvoiceCount = owner.getTotalInvoices() + 1;
+            String newInvoiceNumber = GenerateInvNumber.generateInvoiceNumber(newInvoiceCount);
+
+            int grandTotal = invoiceRequest.getItemsDetails().stream()
+                    .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
+                    .sum();
+
+            int paidAmount = invoiceRequest.getPaidAmount();
+            int dueBalance = Math.max(0, grandTotal - paidAmount);
+
+            // Map to entity
+            Invoice invoice = invoiceRequestMapper.mapToInvoice(invoiceRequest);
+            invoice.setCompany(company);
+            invoice.setGrandTotal(grandTotal);
+            invoice.setDueBalance(dueBalance);
+            invoice.setDueClear(dueBalance == 0 || invoiceRequest.isDueClear());
+            invoice.getInvoiceDetails().setInvNumber(newInvoiceNumber);
+
+            // Save invoice
+            Invoice savedInvoice = invoiceRepository.save(invoice);
+
+            // Update owner invoice count
+            owner.setTotalInvoices(newInvoiceCount);
+            userRepository.save(owner);
+
+            // Prepare response
+            InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(savedInvoice);
+            InvoiceResponse.CompanyDetails companyDetails = new InvoiceResponse.CompanyDetails();
+            companyDetails.setName(company.getCompanyName());
+            companyDetails.setContact(company.getContact());
+            companyDetails.setEmail(company.getEmail());
+            companyDetails.setAddress(company.getAddress());
+            invoiceResponse.setCompanyDetails(companyDetails);
+
+            log.info("Invoice {} created successfully for companyOwnerId={}", newInvoiceNumber, companyOwnerId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(invoiceResponse);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while saving invoice for user {}: {}", companyOwnerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while saving invoice.");
+
+        } catch (Exception ex) {
+            log.error("Unexpected error while saving invoice for user {}: {}", companyOwnerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred. Please try again later.");
         }
-        Optional<Companies> companyData = companiesRepository.findByOwnerId(companyOwnerId);
-        if (companyData.isEmpty()) {
-            return new ResponseEntity<>("Please add your company data.", HttpStatus.BAD_REQUEST);
-        }
-        Companies companyDetails = companyData.get();
-        Users userData = companyOwner.get();
-        int newInvoiceCount = userData.getTotalInvoices() + 1;
-//        String newInvoiceNumber = generateInvoiceNumber(newInvoiceCount);
-        String newInvoiceNumber = GenerateInvNumber.generateInvoiceNumber(newInvoiceCount);
-        int grandTotal = invoiceRequest.getItemsDetails().stream()
-                .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
-                .sum();
-        int paidAmount = invoiceRequest.getPaidAmount();
-        int dueBalance = grandTotal - paidAmount;
-        Invoice newInvoice = invoiceRequestMapper.mapToInvoice(invoiceRequest);
-        newInvoice.setGrandTotal(grandTotal);
-        newInvoice.setDueBalance(dueBalance);
-        newInvoice.setCompany(companyDetails);
-        newInvoice.getInvoiceDetails().setInvNumber(newInvoiceNumber);
-        newInvoice.setDueClear(dueBalance == 0 || invoiceRequest.isDueClear());
-        Invoice savedInvoice = invoiceRepository.save(newInvoice);
-        userData.setTotalInvoices(newInvoiceCount);
-        userRepository.save(userData);
-        InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(savedInvoice);
-        invoiceResponse.setCompanyDetails(new InvoiceResponse.CompanyDetails());
-        invoiceResponse.getCompanyDetails().setName(savedInvoice.getCompany().getCompanyName());
-        invoiceResponse.getCompanyDetails().setContact(savedInvoice.getCompany().getContact());
-        invoiceResponse.getCompanyDetails().setEmail(savedInvoice.getCompany().getEmail());
-        invoiceResponse.getCompanyDetails().setAddress(savedInvoice.getCompany().getAddress());
-        return new ResponseEntity<>(invoiceResponse, HttpStatus.CREATED);
     }
 
     // fetch invoice
     public ResponseEntity<?> getInvoiceById(String invoiceId, String userId) {
-        Optional<Invoice> toFetchInvoice = invoiceRepository.findById(invoiceId);
-        if (toFetchInvoice.isEmpty()) {
-            return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
-        }
-        Invoice invoiceDetails = toFetchInvoice.get();
-        Companies company = invoiceDetails.getCompany();
-        String companyId = invoiceDetails.getCompany().getId();
-        Optional<Users> user = userRepository.findById(userId);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
-        }
-        boolean isFind = false;
-        List<Companies> companiesList = user.get().getCompanies();
-        for (Companies companies : companiesList) {
-            if (companies.getId().equals(companyId)) {
-                isFind = true;
-                break;
+        try {
+            // Validate input
+            if (invoiceId == null || userId == null || invoiceId.isBlank() || userId.isBlank()) {
+                log.warn("Invalid request: invoiceId or userId is null/blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Invoice ID and User ID are required.");
             }
+
+            // Fetch invoice
+            Optional<Invoice> toFetchInvoice = invoiceRepository.findById(invoiceId);
+            if (toFetchInvoice.isEmpty()) {
+                log.warn("Invoice not found for ID: {}", invoiceId);
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Invoice not found!");
+            }
+
+            Invoice invoiceDetails = toFetchInvoice.get();
+            Companies company = invoiceDetails.getCompany();
+
+            if (company == null) {
+                log.error("Invoice {} has no associated company", invoiceId);
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Invoice data is corrupted. Company details missing.");
+            }
+
+            // Fetch user
+            Optional<Users> user = userRepository.findById(userId);
+            if (user.isEmpty()) {
+                log.warn("User not found for ID: {}", userId);
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("User not found!");
+            }
+
+            // Validate ownership
+            boolean ownsCompany = user.get().getCompanies()
+                    .stream()
+                    .anyMatch(c -> c.getId().equals(company.getId()));
+
+            if (!ownsCompany) {
+                log.warn("Unauthorized access attempt by user {} for invoice {}", userId, invoiceId);
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("You are not authorized to view this invoice.");
+            }
+
+            // Map to response DTO
+            InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(invoiceDetails);
+            InvoiceResponse.CompanyDetails companyDetails = new InvoiceResponse.CompanyDetails();
+            companyDetails.setName(company.getCompanyName());
+            companyDetails.setEmail(company.getEmail());
+            companyDetails.setAddress(company.getAddress());
+            companyDetails.setContact(company.getContact());
+            invoiceResponse.setCompanyDetails(companyDetails);
+
+            log.info("Invoice {} fetched successfully by user {}", invoiceId, userId);
+            return ResponseEntity.ok(invoiceResponse);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while fetching invoice {}: {}", invoiceId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while retrieving invoice.");
+
+        } catch (Exception ex) {
+            log.error("Error occurred while fetching invoice {} for user {}: {}", invoiceId, userId, ex.getMessage(), ex);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while fetching the invoice. Please try again later.");
         }
-        if (!isFind) {
-            return new ResponseEntity<>("Invoice not found!", HttpStatus.BAD_REQUEST);
-        }
-        InvoiceResponse invoiceResponse = invoiceResponseMapper.mapToResponse(invoiceDetails);
-        invoiceResponse.setCompanyDetails(new InvoiceResponse.CompanyDetails());
-        invoiceResponse.getCompanyDetails().setName(company.getCompanyName());
-        invoiceResponse.getCompanyDetails().setEmail(company.getEmail());
-        invoiceResponse.getCompanyDetails().setAddress(company.getAddress());
-        invoiceResponse.getCompanyDetails().setContact(company.getContact());
-        return new ResponseEntity<>(invoiceResponse, HttpStatus.OK);
     }
 
     // fetch latest 20 invoice
     public ResponseEntity<?> getLatestInvoice(String ownerId) {
-        Optional<Users> user = userRepository.findById(ownerId);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>("Create account.", HttpStatus.BAD_REQUEST);
+        try {
+            // Validate input
+            if (ownerId == null || ownerId.isBlank()) {
+                log.warn("Invalid request: ownerId is null or blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Owner ID is required.");
+            }
+
+            // Fetch user
+            Optional<Users> userOpt = userRepository.findById(ownerId);
+            if (userOpt.isEmpty()) {
+                log.warn("User not found for ownerId: {}", ownerId);
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Account not found. Please create your account first.");
+            }
+
+            Users user = userOpt.get();
+
+            // Check if user has a company
+            if (user.getTotalCompany() == 0 || user.getCompanies().isEmpty()) {
+                log.warn("User {} has no associated company", ownerId);
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body("No company found. Please create your company first.");
+            }
+
+            // Fetch company's latest invoices
+            String companyId = user.getCompanies().getFirst().getId();
+            Pageable topTwenty = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
+            Page<Invoice> invoicePage = invoiceRepository.findByCompanyId(companyId, topTwenty);
+            List<Invoice> latestInvoices = invoicePage.getContent();
+
+            if (latestInvoices.isEmpty()) {
+                log.info("No invoices found for companyId: {}", companyId);
+                return ResponseEntity
+                        .status(HttpStatus.NO_CONTENT)
+                        .body("No invoices available.");
+            }
+
+            // Map invoices to response objects
+            List<InvoiceResponse> responseList = latestInvoices.stream()
+                    .map(invoiceResponseMapper::mapToResponse)
+                    .toList();
+
+            log.info("Fetched {} latest invoices for company {}", responseList.size(), companyId);
+            return ResponseEntity.ok(responseList);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while fetching invoice for  {}: {}", ownerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while retrieving invoice.");
+
+        } catch (Exception e) {
+            log.error("Error while fetching latest invoices for owner {}: {}", ownerId, e.getMessage(), e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while fetching invoices. Please try again later.");
         }
-        Users userData = user.get();
-        if (userData.getTotalCompany() == 0) {
-            return new ResponseEntity<>("Create company account.", HttpStatus.CONFLICT);
-        }
-        String companyId = userData.getCompanies().getFirst().getId();
-        Pageable topTwenty = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
-        List<Invoice> latestInvoice = invoiceRepository.findByCompanyId(companyId, topTwenty).getContent();
-        if (latestInvoice.isEmpty()) {
-            return new ResponseEntity<>(latestInvoice, HttpStatus.NO_CONTENT);
-        }
-        List<InvoiceResponse> responseList = latestInvoice.stream()
-                .map(invoiceResponseMapper::mapToResponse)
-                .toList();
-        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 
     // get all invoice
     public ResponseEntity<?> getAllInvoice(String ownerId, String companyId) {
-        Optional<Users> user = userRepository.findById(ownerId);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>("Create account!", HttpStatus.BAD_REQUEST);
-        }
-        Users userData = user.get();
-        if (userData.getTotalCompany() == 0) {
-            return new ResponseEntity<>("Create company account.", HttpStatus.BAD_REQUEST);
-        }
-        boolean isFind = false;
-        List<Companies> companiesList = userData.getCompanies();
-        for (Companies companies1 : companiesList) {
-            if (companies1.getId().equals(companyId)) {
-                isFind = true;
-                break;
+        try {
+            // Input validation
+            if (ownerId == null || ownerId.isBlank() || companyId == null || companyId.isBlank()) {
+                log.warn("Invalid request: ownerId or companyId is null/blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Owner ID and Company ID are required.");
             }
+
+            // Fetch user
+            Optional<Users> userOpt = userRepository.findById(ownerId);
+            if (userOpt.isEmpty()) {
+                log.warn("User not found for ownerId: {}", ownerId);
+                return ResponseEntity
+                        .status(HttpStatus.NOT_FOUND)
+                        .body("Account not found. Please create your account first.");
+            }
+
+            Users user = userOpt.get();
+
+            // Check if user has company data
+            if (user.getTotalCompany() == 0 || user.getCompanies().isEmpty()) {
+                log.warn("User {} has no company registered", ownerId);
+                return ResponseEntity
+                        .status(HttpStatus.CONFLICT)
+                        .body("No company found. Please create your company first.");
+            }
+
+            // Verify that the requested company belongs to this user
+            boolean ownsCompany = user.getCompanies()
+                    .stream()
+                    .anyMatch(c -> c.getId().equals(companyId));
+
+            if (!ownsCompany) {
+                log.warn("Unauthorized access attempt: user {} tried to access company {}", ownerId, companyId);
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("You are not authorized to view invoices for this company.");
+            }
+
+            // Fetch invoices for the company
+            List<Invoice> allInvoices = invoiceRepository.findByCompanyId(
+                    companyId, Sort.by(Sort.Direction.DESC, "id")
+            );
+
+            if (allInvoices.isEmpty()) {
+                log.info("No invoices found for companyId: {}", companyId);
+                return ResponseEntity
+                        .status(HttpStatus.NO_CONTENT)
+                        .body("No invoices available.");
+            }
+
+            // Map to response DTO
+            List<InvoiceResponse> responseList = allInvoices.stream()
+                    .map(invoiceResponseMapper::mapToResponse)
+                    .toList();
+
+            log.info("Fetched {} invoices for company {} by user {}", responseList.size(), companyId, ownerId);
+            return ResponseEntity.ok(responseList);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while fetching invoices for owner {} and company {}: {}", ownerId, companyId, ex.getMessage(), ex);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while retrieving invoices.");
+        } catch (Exception e) {
+            log.error("Unexpected error while fetching invoices for owner {} and company {}: {}", ownerId, companyId, e.getMessage(), e);
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while fetching invoices. Please try again later.");
         }
-        if (!isFind) {
-            return new ResponseEntity<>("This company not registered.", HttpStatus.BAD_REQUEST);
-        }
-        List<Invoice> allInvoice = invoiceRepository.findByCompanyId(companyId, Sort.by(Sort.Direction.DESC, "id"));
-        if (allInvoice.isEmpty()) {
-            return new ResponseEntity<>("No invoice found.", HttpStatus.NO_CONTENT);
-        }
-        List<InvoiceResponse> responseList = allInvoice.stream()
-                .map(invoiceResponseMapper::mapToResponse)
-                .toList();
-        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 
     // delete invoice by id
     public ResponseEntity<?> deleteInvoiceById(String invoiceId, String ownerId) {
-        Optional<Invoice> findInvoice = invoiceRepository.findById(invoiceId);
-        if (findInvoice.isEmpty()) {
-            return new ResponseEntity<>("Invoice not found.", HttpStatus.NOT_FOUND);
+        try {
+            if (ownerId == null || ownerId.isBlank() || invoiceId == null || invoiceId.isBlank()) {
+                log.warn("Invalid request: ownerId or invoiceId is null/blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Owner ID and Invoice ID are required.");
+            }
+            Optional<Invoice> findInvoice = invoiceRepository.findById(invoiceId);
+            if (findInvoice.isEmpty()) {
+                return new ResponseEntity<>("Invoice not found.", HttpStatus.NOT_FOUND);
+            }
+
+            String invoiceOwnerId = findInvoice.get().getCompany().getOwner().getId();
+            if (!invoiceOwnerId.equals(ownerId)) {
+                return new ResponseEntity<>("Not allowed to delete!", HttpStatus.UNAUTHORIZED);
+            }
+
+            invoiceRepository.deleteById(invoiceId);
+            log.info("Invoice with ID {} deleted successfully by owner {}", invoiceId, ownerId);
+            return new ResponseEntity<>("Invoice deleted successfully.", HttpStatus.OK);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while deleting invoice {} for owner {}: {}", invoiceId, ownerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while deleting invoice.");
+
+        } catch (Exception e) {
+            log.error("Unexpected error while deleting invoice {} for owner {}: {}", invoiceId, ownerId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while deleting the invoice. Please try again later.");
         }
-        String invoiceOwnerId = findInvoice.get().getCompany().getOwner().getId();
-        if (!invoiceOwnerId.equals(ownerId)) {
-            return new ResponseEntity<>("Not allowed to delete!", HttpStatus.UNAUTHORIZED);
-        }
-        invoiceRepository.deleteById(invoiceId);
-        return new ResponseEntity<>("Invoice deleted successfully.", HttpStatus.OK);
     }
 
     // update or edit invoice
     public ResponseEntity<?> updateInvoice(InvoiceRequest newInvoice, String ownerId, String invoiceId) {
-        Optional<Invoice> oldInvoice = invoiceRepository.findById(invoiceId);
-        if (oldInvoice.isEmpty()) {
-            return new ResponseEntity<>("Invoice not found.", HttpStatus.BAD_REQUEST);
-        }
-        System.out.println("New update : ");
-        System.out.println(newInvoice);
-        if (newInvoice.getItemsDetails().isEmpty()) {
-            return new ResponseEntity<>("No items found in updated invoice.", HttpStatus.BAD_REQUEST);
-        }
-        Invoice oldDetails = oldInvoice.get();
-        if (!oldDetails.getCompany().getOwner().getId().equals(ownerId)) {
-            return new ResponseEntity<>("Not have permission to delete!", HttpStatus.UNAUTHORIZED);
-        }
-        String companyId = oldDetails.getCompany().getId();
-        String invoiceNumber = oldDetails.getInvoiceDetails().getInvNumber();
+        try {
+            if (ownerId == null || ownerId.isBlank() || invoiceId == null || invoiceId.isBlank() || newInvoice == null) {
+                log.warn("Invalid request: ownerId or invoiceId or newInvoice is null/blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Owner ID , Invoice ID and New Invoice are required.");
+            }
+            Optional<Invoice> oldInvoice = invoiceRepository.findById(invoiceId);
+            if (oldInvoice.isEmpty()) {
+                return new ResponseEntity<>("Invoice not found.", HttpStatus.NOT_FOUND);
+            }
 
-        int grandTotal = newInvoice.getItemsDetails().stream()
-                .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
-                .sum();
-        int paidAmount = newInvoice.getPaidAmount();
-        int dueBalance = grandTotal - paidAmount;
-        Invoice updatedInvoice = invoiceRequestMapper.mapToInvoice(newInvoice);
-        updatedInvoice.setGrandTotal(grandTotal);
-        updatedInvoice.setDueBalance(dueBalance);
-        updatedInvoice.setDueClear(dueBalance == 0 || newInvoice.isDueClear());
-        updatedInvoice.setCompany(oldDetails.getCompany());
-        updatedInvoice.getInvoiceDetails().setInvNumber(oldDetails.getInvoiceDetails().getInvNumber());
-        updatedInvoice.setId(oldDetails.getId());
-        Invoice savedInvoice = invoiceRepository.save(updatedInvoice);
-        return new ResponseEntity<>("Invoice updated successfully.", HttpStatus.OK);
+            if (newInvoice.getItemsDetails() == null || newInvoice.getItemsDetails().isEmpty()) {
+                return new ResponseEntity<>("No items found in updated invoice.", HttpStatus.BAD_REQUEST);
+            }
+
+            Invoice oldDetails = oldInvoice.get();
+            if (!oldDetails.getCompany().getOwner().getId().equals(ownerId)) {
+                return new ResponseEntity<>("Not authorized to update this invoice!", HttpStatus.UNAUTHORIZED);
+            }
+
+            // Recalculate totals
+            int grandTotal = newInvoice.getItemsDetails().stream()
+                    .mapToInt(item -> (int) (item.getQuantity() * item.getRate()))
+                    .sum();
+            int paidAmount = newInvoice.getPaidAmount();
+            int dueBalance = grandTotal - paidAmount;
+
+            // Map and update fields
+            Invoice updatedInvoice = invoiceRequestMapper.mapToInvoice(newInvoice);
+            updatedInvoice.setGrandTotal(grandTotal);
+            updatedInvoice.setDueBalance(dueBalance);
+            updatedInvoice.setDueClear(dueBalance == 0 || newInvoice.isDueClear());
+            updatedInvoice.setCompany(oldDetails.getCompany());
+            updatedInvoice.getInvoiceDetails().setInvNumber(oldDetails.getInvoiceDetails().getInvNumber());
+            updatedInvoice.setId(oldDetails.getId());
+
+            invoiceRepository.save(updatedInvoice);
+
+            log.info("Invoice {} successfully updated by owner {}", invoiceId, ownerId);
+            return new ResponseEntity<>("Invoice updated successfully.", HttpStatus.OK);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while updating invoice {} for owner {}: {}", invoiceId, ownerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while updating invoice.");
+
+        } catch (Exception e) {
+            log.error("Unexpected error while updating invoice {} for owner {}: {}", invoiceId, ownerId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while updating invoice. Please try again later.");
+        }
     }
-
 }

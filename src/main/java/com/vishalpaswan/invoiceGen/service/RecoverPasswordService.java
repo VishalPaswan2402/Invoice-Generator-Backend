@@ -6,19 +6,22 @@ import com.vishalpaswan.invoiceGen.dto.*;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
 
+import java.security.SecureRandom;
 import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecoverPasswordService {
@@ -26,93 +29,201 @@ public class RecoverPasswordService {
     @Autowired
     private JavaMailSender javaMailSender;
     private final PasswordEncoder passwordEncoder;
+    private static final SecureRandom secureRandom = new SecureRandom();
+    private static final int OTP_EXPIRY_MINUTES = 1;
 
-    // store otp
+    // store OTP
     private final Cache<String, OtpStore> otpCache = Caffeine.newBuilder()
-            .expireAfterWrite(1, TimeUnit.MINUTES)
+            .expireAfterWrite(OTP_EXPIRY_MINUTES, TimeUnit.MINUTES)
             .maximumSize(1000)
             .build();
 
-    // stored verified otp
+    // stored verified OTP
     private final Cache<String, Boolean> isVerify = Caffeine.newBuilder()
-            .expireAfterWrite(1, TimeUnit.MINUTES)
-//            .maximumSize(1000)
+            .expireAfterWrite(OTP_EXPIRY_MINUTES, TimeUnit.MINUTES)
+            .maximumSize(1000)
             .build();
 
+    // generate OTP
     public String generateOtp() {
-        return String.valueOf(new Random().nextInt(900000) + 100000);
+        return String.valueOf(secureRandom.nextInt(900000) + 100000);
     }
 
     // find user and send otp
-    public ResponseEntity<?> findUser(@RequestBody RecoverPasswordRequest recoverPasswordRequest) {
-        System.out.println("Req data : " + recoverPasswordRequest);
-        if (recoverPasswordRequest.getUsername().isEmpty() || recoverPasswordRequest.getEmail().isEmpty()) {
-            return new ResponseEntity<>("Username or password is missing.", HttpStatus.BAD_REQUEST);
+    public ResponseEntity<?> findUser(RecoverPasswordRequest recoverPasswordRequest) {
+        try {
+            log.info("Password recovery request received for username: {}", recoverPasswordRequest.getUsername());
+
+            if (recoverPasswordRequest.getUsername().isBlank() || recoverPasswordRequest.getEmail().isBlank()) {
+                return ResponseEntity.badRequest().body("Username or email is missing.");
+            }
+
+            Optional<Users> findUser = userRepository.findByUsernameAndEmail(
+                    recoverPasswordRequest.getUsername(),
+                    recoverPasswordRequest.getEmail()
+            );
+
+            if (findUser.isEmpty()) {
+                log.warn("User not found for username: {} and email: {}",
+                        recoverPasswordRequest.getUsername(), recoverPasswordRequest.getEmail());
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+            }
+
+            Users user = findUser.get();
+
+            // Generate secure OTP
+            String generatedOtp = generateOtp();
+
+            // Store OTP in cache
+            otpCache.put(user.getId(), new OtpStore(user.getEmail(), generatedOtp));
+
+            // Send email
+            SimpleMailMessage sms = new SimpleMailMessage();
+            sms.setTo(user.getEmail());
+            sms.setSubject("OTP to recover password");
+            sms.setText("Your OTP is: " + generatedOtp + "\n\nThis OTP is valid for 1 minute.");
+            javaMailSender.send(sms);
+
+            log.info("OTP successfully sent to email: {}", user.getEmail());
+
+            PasswordRecoverUserInfo userInfo = new PasswordRecoverUserInfo(
+                    user.getId(),
+                    user.getUsername(),
+                    user.getEmail()
+            );
+
+            return ResponseEntity.ok(userInfo);
+
+        } catch (MailException ex) {
+            log.error("Failed to send OTP email: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error sending OTP email. Please try again later.");
+        } catch (DataAccessException ex) {
+            log.error("Database error while finding user: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred. Please try again.");
+        } catch (Exception e) {
+            log.error("Unexpected error while recovering password: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unexpected error occurred. Please try again later.");
         }
-        Optional<Users> findUser = userRepository.findByUsernameAndEmail(recoverPasswordRequest.getUsername(), recoverPasswordRequest.getEmail());
-        if (findUser.isEmpty()) {
-            return new ResponseEntity<>("User not found.", HttpStatus.NO_CONTENT);
-        }
-        Users user = findUser.get();
-        String generatedOtp = generateOtp();
-        otpCache.put(user.getId(), new OtpStore(user.getEmail(), generatedOtp));
-        SimpleMailMessage sms = new SimpleMailMessage();
-        sms.setTo(user.getEmail());
-        sms.setSubject("OTP to recover password.");
-        sms.setText("Your OTP is : " + generatedOtp);
-        javaMailSender.send(sms);
-        PasswordRecoverUserInfo userInfo = new PasswordRecoverUserInfo(user.getId(), user.getUsername(), user.getEmail());
-        return new ResponseEntity<>(userInfo, HttpStatus.OK);
     }
 
     // verify otp
     public ResponseEntity<?> verifyUserOtp(OtpRequest otpRequest, String userId) {
-        System.out.println("OTP Request : " + otpRequest);
-        if (!otpRequest.getId().equals(userId)) {
-            return new ResponseEntity<>("Invalid request.", HttpStatus.BAD_REQUEST);
-        }
-        Optional<Users> findUser = userRepository.findById(userId);
-        if (findUser.isEmpty()) {
+        try {
+            log.info("Verifying OTP for userId: {}", userId);
+
+            // Validate request integrity
+            if (!otpRequest.getId().equals(userId)) {
+                log.warn("Invalid OTP verification request: mismatched userId.");
+                return ResponseEntity.badRequest().body("Invalid request.");
+            }
+
+            // Find user
+            Optional<Users> findUser = userRepository.findById(userId);
+            if (findUser.isEmpty()) {
+                otpCache.invalidate(userId);
+                log.warn("User not found during OTP verification. userId={}", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+            }
+
+            Users user = findUser.get();
+
+            // Check if OTP exists in cache
+            OtpStore otpStore = otpCache.getIfPresent(user.getId());
+            if (otpStore == null) {
+                log.warn("OTP expired or not found in cache for userId={}", userId);
+                return ResponseEntity.status(HttpStatus.GONE).body("Session expired. Please request a new OTP.");
+            }
+
+            // Validate OTP input
+            if (otpRequest.getOtp() == null || otpRequest.getOtp().isBlank()) {
+                return ResponseEntity.badRequest().body("OTP cannot be empty.");
+            }
+
+            // Match OTP
+            if (!otpRequest.getOtp().equals(otpStore.getOtp())) {
+                log.warn("Incorrect OTP entered for userId={}", userId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Incorrect OTP. Please try again.");
+            }
+
+            // OTP is valid → mark verified
+            isVerify.put(userId, true);
             otpCache.invalidate(userId);
-            return new ResponseEntity<>("User not found.", HttpStatus.BAD_REQUEST);
+
+            log.info("OTP successfully verified for userId={}", userId);
+
+            PasswordRecoverUserInfo response = new PasswordRecoverUserInfo(
+                    userId,
+                    user.getUsername(),
+                    user.getEmail()
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while finding user: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred. Please try again.");
+        } catch (Exception e) {
+            log.error("Error verifying OTP for userId={}. Message={}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred. Please try again later.");
         }
-        Users user = findUser.get();
-        OtpStore otpStore = otpCache.getIfPresent(user.getId());
-        if (otpStore == null) {
-            return new ResponseEntity<>("Session expired, try again later.", HttpStatus.BAD_REQUEST);
-        }
-        if (!otpRequest.getOtp().equals(otpStore.getOtp())) {
-            return new ResponseEntity<>("Incorrect, try again with correct OTP.", HttpStatus.NON_AUTHORITATIVE_INFORMATION);
-        }
-        isVerify.put(userId, true);
-        otpCache.invalidate(userId);
-        PasswordRecoverUserInfo passwordRecoverUserInfo = new PasswordRecoverUserInfo(userId, user.getUsername(), user.getEmail());
-        return new ResponseEntity<>(passwordRecoverUserInfo, HttpStatus.OK);
     }
 
     // update password
     public ResponseEntity<?> updatePassword(UpdatePasswordRequest updatePasswordRequest, String userId) {
-        if (!updatePasswordRequest.getId().equals(userId)) {
-            return new ResponseEntity<>("Invalid request.", HttpStatus.BAD_REQUEST);
-        }
-        Optional<Users> findUser = userRepository.findById(userId);
-        if (findUser.isEmpty()) {
-            isVerify.invalidate(userId);
-            return new ResponseEntity<>("User not found.", HttpStatus.BAD_REQUEST);
-        }
-        Boolean isVerified = isVerify.getIfPresent(userId);
-        if (isVerified == null) {
-            return new ResponseEntity<>("Session expired, try again later.", HttpStatus.CONFLICT);
-        }
-        if (!updatePasswordRequest.getPassword().equals(updatePasswordRequest.getConfirmPassword())) {
-            return new ResponseEntity<>("Password not match.", HttpStatus.NON_AUTHORITATIVE_INFORMATION);
-        }
-        //updating password...
-        Users user = findUser.get();
-        user.setPassword(passwordEncoder.encode(updatePasswordRequest.getPassword()));
-        userRepository.save(user);
-        isVerify.invalidate(userId);
-        return new ResponseEntity<>("Password update successfully.", HttpStatus.OK);
-    }
+        try {
+            log.info("Password update request received for userId={}", userId);
 
+            // Verify User
+            if (!updatePasswordRequest.getId().equals(userId)) {
+                log.warn("Invalid update password request: mismatched userId.");
+                return ResponseEntity.badRequest().body("Invalid request.");
+            }
+
+            // Find user
+            Optional<Users> findUser = userRepository.findById(userId);
+            if (findUser.isEmpty()) {
+                isVerify.invalidate(userId);
+                log.warn("User not found for password update. userId={}", userId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+            }
+
+            // Check verified OTP
+            Boolean isVerified = isVerify.getIfPresent(userId);
+            if (isVerified == null) {
+                log.warn("Password update session expired. userId={}", userId);
+                return ResponseEntity.status(HttpStatus.GONE).body("Session expired. Please verify again.");
+            }
+
+            if (updatePasswordRequest.getPassword().isBlank()) {
+                return ResponseEntity.badRequest().body("Password cannot be blank.");
+            }
+
+            if (!updatePasswordRequest.getPassword().equals(updatePasswordRequest.getConfirmPassword())) {
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body("Passwords do not match.");
+            }
+
+            Users user = findUser.get();
+            user.setPassword(passwordEncoder.encode(updatePasswordRequest.getPassword()));
+            userRepository.save(user);
+            isVerify.invalidate(userId);
+
+            log.info("Password successfully updated for userId={}", userId);
+            return ResponseEntity.ok("Password updated successfully.");
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while finding user: {}", ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred. Please try again.");
+        } catch (Exception e) {
+            log.error("Error updating password for userId={}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred while updating password.");
+        }
+    }
 }

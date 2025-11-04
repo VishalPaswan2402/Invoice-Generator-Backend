@@ -6,6 +6,8 @@ import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.CompaniesRepository;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -13,30 +15,64 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProfileService {
     private final UserRepository userRepository;
     private final CompaniesRepository companiesRepository;
 
+    // get profile details
     public ResponseEntity<?> getProfileDetails(String ownerId) {
-        Optional<Users> user = userRepository.findById(ownerId);
-        if (user.isEmpty()) {
-            return new ResponseEntity<>("No user found.", HttpStatus.BAD_REQUEST);
-        }
-        Users owner = user.get();
-        ProfileResponse profileResponse = new ProfileResponse();
-        profileResponse.setUserId(owner.getId());
-        profileResponse.setUsername(owner.getUsername());
-        profileResponse.setUserEmail(owner.getEmail());
-        List<Companies> companiesList = companiesRepository.findAllByOwnerId(ownerId);
-        System.out.println("List of company");
-        System.out.println(companiesList);
-        for (Companies comp : companiesList) {
-            ProfileResponse.Company currCompany = new ProfileResponse.Company(comp.getId(), comp.getCompanyName(), comp.getOwnerName(), comp.getEmail(), comp.getContact(), comp.getAddress(), 0);
-            profileResponse.getCompany().add(currCompany);
-        }
-        return new ResponseEntity<>(profileResponse, HttpStatus.OK);
-    }
+        try {
+            if (ownerId == null || ownerId.isBlank()) {
+                log.warn("Invalid request: ownerId is null/blank");
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body("Invalid request. Owner ID are required.");
+            }
+            Optional<Users> user = userRepository.findById(ownerId);
+            if (user.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No user found.");
+            }
 
+            Users owner = user.get();
+            ProfileResponse profileResponse = new ProfileResponse();
+            profileResponse.setUserId(owner.getId());
+            profileResponse.setUsername(owner.getUsername());
+            profileResponse.setUserEmail(owner.getEmail());
+
+            List<Companies> companiesList = companiesRepository.findAllByOwnerId(ownerId);
+
+            if (companiesList.isEmpty()) {
+                // You can decide to either return an empty list or a message
+                return ResponseEntity.status(HttpStatus.OK)
+                        .body("No companies found for this user.");
+            }
+
+            for (Companies comp : companiesList) {
+                ProfileResponse.Company currCompany = new ProfileResponse.Company(
+                        comp.getId(),
+                        comp.getCompanyName(),
+                        comp.getOwnerName(),
+                        comp.getEmail(),
+                        comp.getContact(),
+                        comp.getAddress(),
+                        0 // invoice count placeholder
+                );
+                profileResponse.getCompany().add(currCompany);
+            }
+
+            return ResponseEntity.ok(profileResponse);
+
+        } catch (DataAccessException ex) {
+            log.error("Database error while fetching profile for {}: {}", ownerId, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Database error occurred while retrieving profile.");
+        } catch (Exception e) {
+            log.error("Unexpected error while fetching profile for {}: {}", ownerId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred. Please try again later.");
+        }
+    }
 }
