@@ -9,7 +9,7 @@ public class ValidateInput {
 
     // Simple regex for email validation
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
-            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
+            "^[\\\\w._%+-]+@[\\\\w.-]+\\\\.[A-Za-z]{2,}$"
     );
 
     // Method to validate phone number

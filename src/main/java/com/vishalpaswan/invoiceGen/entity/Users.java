@@ -1,8 +1,6 @@
 package com.vishalpaswan.invoiceGen.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -24,17 +22,11 @@ public class Users implements UserDetails {
     @Id
     private String id;
 
-    @Valid
     @Indexed(unique = true)
-    @NotBlank(message = "Username is required")
     private String username;
 
-    @Valid
-    @NotBlank(message = "Email is required")
     private String email;
 
-    @Valid
-    @NotBlank(message = "Password is required")
     private String password;
 
     @Builder.Default
