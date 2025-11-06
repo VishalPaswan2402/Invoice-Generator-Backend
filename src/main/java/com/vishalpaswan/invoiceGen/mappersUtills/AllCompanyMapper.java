@@ -1,6 +1,6 @@
 package com.vishalpaswan.invoiceGen.mappersUtills;
 
-import com.vishalpaswan.invoiceGen.dto.AllCompanyList;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.AllCompanyList;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import org.mapstruct.Mapper;
 

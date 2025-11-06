@@ -2,7 +2,12 @@ package com.vishalpaswan.invoiceGen.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.vishalpaswan.invoiceGen.dto.*;
+import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.RecoverPasswordRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.UpdatePasswordRequest;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.OtpStore;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.PasswordRecoverUserInfo;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +60,7 @@ public class RecoverPasswordService {
             log.info("Password recovery request received for username: {}", recoverPasswordRequest.getUsername());
 
             if (recoverPasswordRequest.getUsername().isBlank() || recoverPasswordRequest.getEmail().isBlank()) {
-                return ResponseEntity.badRequest().body("Username or email is missing.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Username or email is missing.");
             }
 
             Optional<Users> findUser = userRepository.findByUsernameAndEmail(
@@ -66,7 +71,7 @@ public class RecoverPasswordService {
             if (findUser.isEmpty()) {
                 log.warn("User not found for username: {} and email: {}",
                         recoverPasswordRequest.getUsername(), recoverPasswordRequest.getEmail());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "User not found.");
             }
 
             Users user = findUser.get();
@@ -92,20 +97,17 @@ public class RecoverPasswordService {
                     user.getEmail()
             );
 
-            return ResponseEntity.ok(userInfo);
+            return ResponseBuilder.success(HttpStatus.OK, "OTP sent successfully.", userInfo);
 
         } catch (MailException ex) {
             log.error("Failed to send OTP email: {}", ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error sending OTP email. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Error sending OTP email. Please try again later.");
         } catch (DataAccessException ex) {
             log.error("Database error while finding user: {}", ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred. Please try again.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred. Please try again.");
         } catch (Exception e) {
             log.error("Unexpected error while recovering password: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected error occurred. Please try again later.");
         }
     }
 
@@ -117,7 +119,7 @@ public class RecoverPasswordService {
             // Validate request integrity
             if (!otpRequest.getId().equals(userId)) {
                 log.warn("Invalid OTP verification request: mismatched userId.");
-                return ResponseEntity.badRequest().body("Invalid request.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid request.");
             }
 
             // Find user
@@ -125,7 +127,7 @@ public class RecoverPasswordService {
             if (findUser.isEmpty()) {
                 otpCache.invalidate(userId);
                 log.warn("User not found during OTP verification. userId={}", userId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "User not found.");
             }
 
             Users user = findUser.get();
@@ -134,19 +136,18 @@ public class RecoverPasswordService {
             OtpStore otpStore = otpCache.getIfPresent(user.getId());
             if (otpStore == null) {
                 log.warn("OTP expired or not found in cache for userId={}", userId);
-                return ResponseEntity.status(HttpStatus.GONE).body("Session expired. Please request a new OTP.");
+                return ResponseBuilder.error(HttpStatus.GONE, "Session expired. Please request a new OTP.");
             }
 
             // Validate OTP input
             if (otpRequest.getOtp() == null || otpRequest.getOtp().isBlank()) {
-                return ResponseEntity.badRequest().body("OTP cannot be empty.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "OTP cannot be empty.");
             }
 
             // Match OTP
             if (!otpRequest.getOtp().equals(otpStore.getOtp())) {
                 log.warn("Incorrect OTP entered for userId={}", userId);
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body("Incorrect OTP. Please try again.");
+                return ResponseBuilder.error(HttpStatus.UNAUTHORIZED, "Incorrect OTP. Please try again.");
             }
 
             // OTP is valid → mark verified
@@ -161,16 +162,14 @@ public class RecoverPasswordService {
                     user.getEmail()
             );
 
-            return ResponseEntity.ok(response);
+            return ResponseBuilder.success(HttpStatus.OK, "OTP successfully verified.", response);
 
         } catch (DataAccessException ex) {
             log.error("Database error while finding user: {}", ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred. Please try again.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred. Please try again.");
         } catch (Exception e) {
             log.error("Error verifying OTP for userId={}. Message={}", userId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
 
@@ -182,7 +181,7 @@ public class RecoverPasswordService {
             // Verify User
             if (!updatePasswordRequest.getId().equals(userId)) {
                 log.warn("Invalid update password request: mismatched userId.");
-                return ResponseEntity.badRequest().body("Invalid request.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid request.");
             }
 
             // Find user
@@ -190,22 +189,22 @@ public class RecoverPasswordService {
             if (findUser.isEmpty()) {
                 isVerify.invalidate(userId);
                 log.warn("User not found for password update. userId={}", userId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "User not found.");
             }
 
             // Check verified OTP
             Boolean isVerified = isVerify.getIfPresent(userId);
             if (isVerified == null) {
                 log.warn("Password update session expired. userId={}", userId);
-                return ResponseEntity.status(HttpStatus.GONE).body("Session expired. Please verify again.");
+                return ResponseBuilder.error(HttpStatus.GONE, "Session expired. Please verify again.");
             }
 
             if (updatePasswordRequest.getPassword().isBlank()) {
-                return ResponseEntity.badRequest().body("Password cannot be blank.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Password cannot be blank.");
             }
 
             if (!updatePasswordRequest.getPassword().equals(updatePasswordRequest.getConfirmPassword())) {
-                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body("Passwords do not match.");
+                return ResponseBuilder.error(HttpStatus.UNPROCESSABLE_ENTITY, "Passwords do not match.");
             }
 
             Users user = findUser.get();
@@ -214,16 +213,14 @@ public class RecoverPasswordService {
             isVerify.invalidate(userId);
 
             log.info("Password successfully updated for userId={}", userId);
-            return ResponseEntity.ok("Password updated successfully.");
+            return ResponseBuilder.success(HttpStatus.OK, "Password updated successfully.", null);
 
         } catch (DataAccessException ex) {
             log.error("Database error while finding user: {}", ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred. Please try again.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred. Please try again.");
         } catch (Exception e) {
             log.error("Error updating password for userId={}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred while updating password.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred while updating password.");
         }
     }
 }

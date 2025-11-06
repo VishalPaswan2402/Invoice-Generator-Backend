@@ -1,8 +1,9 @@
 package com.vishalpaswan.invoiceGen.service;
 
-import com.vishalpaswan.invoiceGen.dto.AllCompanyList;
-import com.vishalpaswan.invoiceGen.dto.CompanyResponse;
-import com.vishalpaswan.invoiceGen.dto.NewCompanyRequest;
+import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.NewCompanyRequest;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.AllCompanyList;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.CompanyResponse;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.inputValidationCheck.ValidateInput;
@@ -40,7 +41,7 @@ public class CompaniesService {
             Optional<Users> userExist = userRepository.findById(ownerId);
             if (userExist.isEmpty()) {
                 log.warn("Attempt to add company with non-existent user ID: {}", ownerId);
-                return ResponseEntity.badRequest().body("Please signup to add your company.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Please signup to add your company.");
             }
 
             Users currentUser = userExist.get();
@@ -48,17 +49,17 @@ public class CompaniesService {
             // Restrict multiple company creation
             if (currentUser.getTotalCompany() != 0) {
                 log.warn("User {} tried to add more than one company", ownerId);
-                return ResponseEntity.badRequest().body("Only one company can be added!");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Only one company can be added!");
             }
             // Validate email and phone number
             if (!ValidateInput.isValidEmail(companyRequest.getEmail())) {
                 log.warn("Invalid email provided: {}", companyRequest.getEmail());
-                return ResponseEntity.badRequest().body("Invalid email.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid email.");
             }
 
             if (!ValidateInput.isValidPhoneNumber(companyRequest.getContact())) {
                 log.warn("Invalid phone number provided: {}", companyRequest.getContact());
-                return ResponseEntity.badRequest().body("Invalid phone number.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid phone number.");
             }
 
             // Map and save company
@@ -72,17 +73,15 @@ public class CompaniesService {
             userRepository.save(currentUser);
 
             log.info("New company '{}' added successfully for user '{}'", newCompany.getCompanyName(), ownerId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedCompany);
+            return ResponseBuilder.success(HttpStatus.CREATED, "New company added successfully.", savedCompany);
 
         } catch (DataAccessException ex) {
             log.error("Database error while saving company for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("A database error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "A database error occurred. Please try again later.");
 
         } catch (Exception ex) {
             log.error("Unexpected error while saving company for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
 
@@ -92,7 +91,7 @@ public class CompaniesService {
             // Basic validation
             if (ownerId == null || companyId == null || ownerId.isBlank() || companyId.isBlank()) {
                 log.warn("Invalid request: ownerId or companyId is null/blank. ownerId={}, companyId={}", ownerId, companyId);
-                return ResponseEntity.badRequest().body("Invalid request. Missing owner or company ID.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid request. Missing owner or company ID.");
             }
 
             // Fetch user and company
@@ -101,12 +100,12 @@ public class CompaniesService {
 
             if (userOpt.isEmpty()) {
                 log.warn("User not found for ID: {}", ownerId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "User not found.");
             }
 
             if (companyOpt.isEmpty()) {
                 log.warn("Company not found for ID: {}", companyId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Company details not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "Company details not found.");
             }
 
             Companies companyData = companyOpt.get();
@@ -114,7 +113,7 @@ public class CompaniesService {
             // Ensure company belongs to user
             if (!companyData.getOwner().getId().equals(ownerId)) {
                 log.warn("Unauthorized access attempt: user {} tried to access company {}", ownerId, companyId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized to view this company's details.");
+                return ResponseBuilder.error(HttpStatus.FORBIDDEN, "You are not authorized to view this company's details.");
             }
 
             // Map and generate invoice number
@@ -123,17 +122,15 @@ public class CompaniesService {
             companyResponse.setTotalInvoice(user.getTotalInvoices());
 
             log.info("Company details retrieved successfully for companyId={} by user={}", companyId, ownerId);
-            return ResponseEntity.ok(companyResponse);
+            return ResponseBuilder.success(HttpStatus.OK, "Company details retrieved successfully.", companyResponse);
 
         } catch (DataAccessException ex) {
             log.error("Database error while fetching company details for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while retrieving company details.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while retrieving company details.");
 
         } catch (Exception ex) {
             log.error("Unexpected error while fetching company details for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
 
@@ -143,15 +140,14 @@ public class CompaniesService {
             // Validate ownerId
             if (ownerId == null || ownerId.isBlank()) {
                 log.warn("Invalid request: ownerId is null or empty");
-                return ResponseEntity.badRequest().body("Owner ID is required.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Owner ID is required.");
             }
 
             // Fetch user
             Optional<Users> userOpt = userRepository.findById(ownerId);
             if (userOpt.isEmpty()) {
                 log.warn("No user found for ownerId={}", ownerId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Owner of company not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "Owner of company not found.");
             }
 
             Users owner = userOpt.get();
@@ -160,25 +156,22 @@ public class CompaniesService {
             List<Companies> companiesList = owner.getCompanies();
             if (companiesList == null || companiesList.isEmpty()) {
                 log.info("No companies found for user {}", ownerId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("No company found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "No company found.");
             }
 
             // Map to DTO/Response model
             List<AllCompanyList> companyResponses = allCompanyMapper.mapToAllCompanyList(companiesList);
 
             log.info("Retrieved {} companies for user {}", companyResponses.size(), ownerId);
-            return ResponseEntity.ok(companyResponses);
+            return ResponseBuilder.success(HttpStatus.OK, "Retrieved companies data.", companyResponses);
 
         } catch (DataAccessException ex) {
             log.error("Database error while fetching companies for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while fetching company list.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while fetching company list.");
 
         } catch (Exception ex) {
             log.error("Unexpected error while fetching companies for user {}: {}", ownerId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
 }

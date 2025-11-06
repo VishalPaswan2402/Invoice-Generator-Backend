@@ -1,6 +1,7 @@
 package com.vishalpaswan.invoiceGen.service;
 
-import com.vishalpaswan.invoiceGen.dto.InvoiceResponse;
+import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.InvoiceResponse;
 import com.vishalpaswan.invoiceGen.entity.Invoice;
 import com.vishalpaswan.invoiceGen.mappersUtills.InvoiceResponseMapper;
 import com.vishalpaswan.invoiceGen.repository.InvoiceRepository;
@@ -26,14 +27,14 @@ public class CustomerService {
             // Validate input
             if (invoiceId == null || invoiceId.isBlank()) {
                 log.warn("Invalid request: invoiceId is null or blank");
-                return ResponseEntity.badRequest().body("Invalid invoice ID.");
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid invoice ID.");
             }
 
             // Fetch invoice
             Optional<Invoice> invoiceOpt = invoiceRepository.findById(invoiceId);
             if (invoiceOpt.isEmpty()) {
                 log.warn("Invoice not found for id={}", invoiceId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Invoice not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "Invoice not found.");
             }
 
             Invoice invoice = invoiceOpt.get();
@@ -55,17 +56,15 @@ public class CustomerService {
             }
 
             log.info("Invoice {} retrieved successfully", invoiceId);
-            return ResponseEntity.ok(invoiceResponse);
+            return ResponseBuilder.success(HttpStatus.OK, "Invoice retrieved successfully", invoiceResponse);
 
         } catch (DataAccessException ex) {
             log.error("Database error while fetching invoice {}: {}", invoiceId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while retrieving invoice.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while retrieving invoice.");
 
         } catch (Exception ex) {
             log.error("Unexpected error while fetching invoice {}: {}", invoiceId, ex.getMessage(), ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred. Please try again later.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
 }

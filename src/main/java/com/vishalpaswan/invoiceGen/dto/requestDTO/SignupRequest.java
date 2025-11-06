@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.dto;
+package com.vishalpaswan.invoiceGen.dto.requestDTO;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;

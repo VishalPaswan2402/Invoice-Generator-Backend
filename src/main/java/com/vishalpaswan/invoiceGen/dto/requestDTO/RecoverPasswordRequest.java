@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.dto;
+package com.vishalpaswan.invoiceGen.dto.requestDTO;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -15,6 +15,7 @@ public class RecoverPasswordRequest {
     @Valid
     @NotBlank(message = "Username is missing.")
     private String username;
+
     @Valid
     @NotBlank(message = "Email is missing")
     private String email;

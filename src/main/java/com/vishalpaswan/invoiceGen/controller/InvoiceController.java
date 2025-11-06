@@ -1,6 +1,6 @@
 package com.vishalpaswan.invoiceGen.controller;
 
-import com.vishalpaswan.invoiceGen.dto.InvoiceRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.InvoiceRequest;
 import com.vishalpaswan.invoiceGen.service.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

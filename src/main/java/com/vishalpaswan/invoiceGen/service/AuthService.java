@@ -1,9 +1,9 @@
 package com.vishalpaswan.invoiceGen.service;
 
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
-import com.vishalpaswan.invoiceGen.dto.LoginRequest;
-import com.vishalpaswan.invoiceGen.dto.LoginResponse;
-import com.vishalpaswan.invoiceGen.dto.SignupRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.LoginRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.SignupRequest;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.LoginResponse;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import com.vishalpaswan.invoiceGen.security.AuthUtils;

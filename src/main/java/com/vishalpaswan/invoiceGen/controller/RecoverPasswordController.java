@@ -1,8 +1,8 @@
 package com.vishalpaswan.invoiceGen.controller;
 
-import com.vishalpaswan.invoiceGen.dto.OtpRequest;
-import com.vishalpaswan.invoiceGen.dto.RecoverPasswordRequest;
-import com.vishalpaswan.invoiceGen.dto.UpdatePasswordRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.RecoverPasswordRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.UpdatePasswordRequest;
 import com.vishalpaswan.invoiceGen.service.RecoverPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

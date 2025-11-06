@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.dto;
+package com.vishalpaswan.invoiceGen.dto.responseDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AllCompanyList {
+public class PasswordRecoverUserInfo {
     private String id;
-    private String companyName;
-    private String address;
-    private String contact;
+    private String username;
     private String email;
 }

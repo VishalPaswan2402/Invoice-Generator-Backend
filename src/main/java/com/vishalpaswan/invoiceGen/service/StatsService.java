@@ -1,9 +1,10 @@
 package com.vishalpaswan.invoiceGen.service;
 
-import com.vishalpaswan.invoiceGen.dto.GraphStatsDays;
-import com.vishalpaswan.invoiceGen.dto.GraphStatsMonths;
-import com.vishalpaswan.invoiceGen.dto.GraphStatsWeeks;
-import com.vishalpaswan.invoiceGen.dto.StatsSummary;
+import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.GraphStatsDays;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.GraphStatsMonths;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.GraphStatsWeeks;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.StatsSummary;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import com.vishalpaswan.invoiceGen.entity.Invoice;
 import com.vishalpaswan.invoiceGen.entity.Users;
@@ -52,7 +53,7 @@ public class StatsService {
         try {
             if (!isOwnerAndCompanyExist(ownerId, companyId)) {
                 log.warn("Invalid owner/company access: ownerId={}, companyId={}", ownerId, companyId);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Data not found.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "Data not found.");
             }
 
             LocalDate today = LocalDate.now();
@@ -82,16 +83,14 @@ public class StatsService {
             }
 
             log.info("Successfully fetched last 15 days stats for ownerId={}, companyId={}", ownerId, companyId);
-            return ResponseEntity.ok(last15Days);
+            return ResponseBuilder.success(HttpStatus.OK, "Successfully fetched last 15 days stats", last15Days);
 
         } catch (DataAccessException e) {
             log.error("Database error while fetching last 15 days stats for ownerId={}, companyId={}: {}", ownerId, companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while fetching stats.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while fetching stats.");
         } catch (Exception e) {
             log.error("Unexpected error while fetching last 15 days stats for ownerId={}, companyId={}: {}", ownerId, companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred while generating stats.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred while generating stats.");
         }
     }
 
@@ -102,7 +101,7 @@ public class StatsService {
             // Validate owner and company existence
             if (!isOwnerAndCompanyExist(ownerId, companyId)) {
                 log.warn("Invalid request: Owner or Company not found. OwnerId={}, CompanyId={}", ownerId, companyId);
-                return new ResponseEntity<>("Data not found.", HttpStatus.BAD_REQUEST);
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Data not found.");
             }
 
             LocalDate today = LocalDate.now();
@@ -148,20 +147,19 @@ public class StatsService {
             }
 
             log.info("Successfully generated last 7 weeks stats for companyId={}", companyId);
-            return new ResponseEntity<>(last7Weeks, HttpStatus.OK);
+            return ResponseBuilder.success(HttpStatus.OK, "Successfully generated last 7 weeks stats", last7Weeks);
         } catch (DateTimeParseException e) {
             log.error("Date parsing error while generating weekly stats: {}", e.getMessage());
-            return new ResponseEntity<>("Invalid date format in invoice data.", HttpStatus.BAD_REQUEST);
+            return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid date format in invoice data.");
         } catch (NullPointerException e) {
             log.error("Null value encountered while generating weekly stats: {}", e.getMessage());
-            return new ResponseEntity<>("Some required data is missing.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Some required data is missing.");
         } catch (DataAccessException e) {
             log.error("Database error while fetching last 7 weeks stats for ownerId={}, companyId={}: {}", ownerId, companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while fetching stats.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while fetching stats.");
         } catch (Exception e) {
             log.error("Unexpected error occurred while generating weekly stats: {}", e.getMessage(), e);
-            return new ResponseEntity<>("An unexpected error occurred while processing weekly stats.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred while processing weekly stats.");
         }
     }
 
@@ -171,7 +169,7 @@ public class StatsService {
             // Validate if owner and company exist
             if (!isOwnerAndCompanyExist(ownerId, companyId)) {
                 log.warn("Invalid request: Owner or Company not found. OwnerId={}, CompanyId={}", ownerId, companyId);
-                return new ResponseEntity<>("Data not found.", HttpStatus.BAD_REQUEST);
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Data not found.");
             }
 
             LocalDate today = LocalDate.now();
@@ -208,20 +206,19 @@ public class StatsService {
             }
 
             log.info("Successfully generated last 12 months stats for companyId={}", companyId);
-            return new ResponseEntity<>(last12Months, HttpStatus.OK);
+            return ResponseBuilder.success(HttpStatus.OK, "Successfully generated last 12 months stats", last12Months);
         } catch (DateTimeParseException e) {
             log.error("Date parsing error while generating monthly stats: {}", e.getMessage());
-            return new ResponseEntity<>("Invalid date format in invoice data.", HttpStatus.BAD_REQUEST);
+            return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Invalid date format in invoice data.");
         } catch (NullPointerException e) {
             log.error("Null value encountered while generating monthly stats: {}", e.getMessage());
-            return new ResponseEntity<>("Some required data is missing.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Some required data is missing.");
         } catch (DataAccessException e) {
             log.error("Database error while fetching last 12 months stats for ownerId={}, companyId={}: {}", ownerId, companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while fetching stats.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while fetching stats.");
         } catch (Exception e) {
             log.error("Unexpected error occurred while generating monthly stats: {}", e.getMessage(), e);
-            return new ResponseEntity<>("An unexpected error occurred while processing monthly stats.", HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred while processing monthly stats.");
         }
     }
 
@@ -231,14 +228,14 @@ public class StatsService {
             // Validate if owner and company exist
             if (!isOwnerAndCompanyExist(ownerId, companyId)) {
                 log.warn("Invalid request: Owner or Company not found. OwnerId={}, CompanyId={}", ownerId, companyId);
-                return new ResponseEntity<>("Data not found.", HttpStatus.BAD_REQUEST);
+                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Data not found.");
             }
 
             // Fetch all invoices
             List<Invoice> invoiceList = invoiceRepository.findByCompanyId(companyId);
             if (invoiceList.isEmpty()) {
                 log.info("No invoices found for CompanyId={}", companyId);
-                return new ResponseEntity<>("No invoices found.", HttpStatus.NO_CONTENT);
+                return ResponseBuilder.success(HttpStatus.NO_CONTENT, "No invoices found.", null);
             }
 
             int totalInvoice = invoiceList.size();
@@ -285,15 +282,13 @@ public class StatsService {
             );
 
             log.info("Successfully generated stats summary for CompanyId={}", companyId);
-            return new ResponseEntity<>(statsSummaryList, HttpStatus.OK);
+            return ResponseBuilder.success(HttpStatus.OK, "Successfully generated stats summary.", statsSummaryList);
         } catch (DataAccessException e) {
             log.error("Database error while fetching stats summary for CompanyId={}: {}", companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Database error occurred while retrieving statistics.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "Database error occurred while retrieving statistics.");
         } catch (Exception e) {
             log.error("Unexpected error in getStatsSummary for CompanyId={}: {}", companyId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("An unexpected error occurred while generating statistics.");
+            return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred while generating statistics.");
         }
     }
 }

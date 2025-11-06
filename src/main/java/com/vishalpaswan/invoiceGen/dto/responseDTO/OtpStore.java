@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.dto;
+package com.vishalpaswan.invoiceGen.dto.responseDTO;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,8 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UpdatePasswordRequest {
-    private String id;
-    private String password;
-    private String confirmPassword;
+public class OtpStore {
+    private String email;
+    private String otp;
 }
