@@ -30,7 +30,7 @@ public class AuthUtils {
                 .compact();
     }
 
-    public String getUsernameFromToken(String token) {
+    private String getUsernameFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSecretKey())
                 .build()
@@ -39,4 +39,22 @@ public class AuthUtils {
 
         return claims.getSubject();
     }
+
+    private String getUserIdFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSecretKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.get("userId", String.class);
+    }
+
+    public String getUserNameFromRequestToken(String token) {
+        return getUsernameFromToken(token);
+    }
+
+    public String getUserIdFromRequestToken(String token) {
+        return getUserIdFromToken(token);
+    }
+
 }
