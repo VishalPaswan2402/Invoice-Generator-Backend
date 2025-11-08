@@ -1,0 +1,29 @@
+spring:
+  #  config:
+  #    import: optional:file:.env[.properties]
+
+  application:
+    name: ${SPRING_APPLICATION_NAME:invoiceGen}
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/invoiceGen}
+
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.ethereal.email}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:norma58@ethereal.email}
+    password: ${SPRING_MAIL_PASSWORD:xMYutTAsxwRmrHGZ6V}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+
+jwt:
+  secretKey: ${JWT_SECRET_KEY:asja23jcowe425ncoiweckjs38aska2n22-3edq0ncojasco}
+  expiration: ${JWT_EXPIRATION:3600000}
+
+#server:
+#  port: ${SERVER_PORT:8080}
