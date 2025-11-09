@@ -13,11 +13,11 @@ import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,12 +30,15 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class RecoverPasswordService {
+    @Value("${spring.mail.username}")
+    private String siteEmail;
     private final UserRepository userRepository;
     @Autowired
     private JavaMailSender javaMailSender;
     private final PasswordEncoder passwordEncoder;
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final int OTP_EXPIRY_MINUTES = 1;
+    private final SendEmailService sendEmailService;
 
     // store OTP
     private final Cache<String, OtpStore> otpCache = Caffeine.newBuilder()
@@ -83,11 +86,7 @@ public class RecoverPasswordService {
             otpCache.put(user.getId(), new OtpStore(user.getEmail(), generatedOtp));
 
             // Send email
-            SimpleMailMessage sms = new SimpleMailMessage();
-            sms.setTo(user.getEmail());
-            sms.setSubject("OTP to recover password");
-            sms.setText("Your OTP is: " + generatedOtp + "\n\nThis OTP is valid for 1 minute.");
-            javaMailSender.send(sms);
+            sendEmailService.sendOtpEmail(siteEmail, user.getEmail(), generatedOtp);
 
             log.info("OTP successfully sent to email: {}", user.getEmail());
 

@@ -41,24 +41,31 @@ public class InvoiceController {
     }
 
     // get all invoice
-    @GetMapping("{ownerId}/{companyId}/all-invoices")
+    @GetMapping("/{ownerId}/{companyId}/all-invoices")
     public ResponseEntity<?> getAllInvoice(@PathVariable String ownerId, @PathVariable String companyId, @RequestHeader("Authorization") String authHeader) {
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
         return authResult != null ? authResult : invoiceService.getAllInvoice(ownerId, companyId);
     }
 
     // delete invoice by id
-    @DeleteMapping("{ownerId}/{invoiceId}/delete-invoice")
+    @DeleteMapping("/{ownerId}/{invoiceId}/delete-invoice")
     public ResponseEntity<?> deleteInvoiceById(@PathVariable String invoiceId, @PathVariable String ownerId, @RequestHeader("Authorization") String authHeader) {
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
         return authResult != null ? authResult : invoiceService.deleteInvoiceById(invoiceId, ownerId);
     }
 
     // update invoice by id
-    @PutMapping("{ownerId}/{invoiceId}/update-invoice")
+    @PutMapping("/{ownerId}/{invoiceId}/update-invoice")
     public ResponseEntity<?> updateInvoice(@Valid @RequestBody InvoiceRequest newInvoice, @PathVariable String ownerId, @PathVariable String invoiceId, @RequestHeader("Authorization") String authHeader) {
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
         return authResult != null ? authResult : invoiceService.updateInvoice(newInvoice, ownerId, invoiceId);
+    }
+
+    // send invoice url email
+    @PostMapping("/{ownerId}/{invoiceId}/send-mail")
+    public ResponseEntity<?> sendInvoiceUrlMail(@PathVariable String ownerId, @PathVariable String invoiceId, @RequestHeader("Authorization") String authHeader) {
+        ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
+        return authResult != null ? authResult : invoiceService.sendInvoiceLinkOnMail(ownerId, invoiceId);
     }
 
 }

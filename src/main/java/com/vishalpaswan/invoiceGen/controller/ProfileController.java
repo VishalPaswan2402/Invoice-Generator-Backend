@@ -19,11 +19,8 @@ public class ProfileController {
 
     @GetMapping("/{ownerId}/profile")
     public ResponseEntity<?> getProfileDetails(@PathVariable String ownerId, @RequestHeader("Authorization") String authHeader) {
-//        if (!authorize.isUserAuthorize(authHeader, ownerId)) {
-//            return ResponseBuilder.error(HttpStatus.FORBIDDEN, "Access denied: you are not allowed to view this profile.");
-//        }
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
         return authResult != null ? authResult : profileService.getProfileDetails(ownerId);
     }
-    
+
 }
