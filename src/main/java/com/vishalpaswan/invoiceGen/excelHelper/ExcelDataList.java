@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +13,12 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 public class ExcelDataList {
+    private boolean isDatePass(String savedDate) {
+        LocalDate storedDate = LocalDate.parse(savedDate);
+        LocalDate today = LocalDate.now();
+        return storedDate.isBefore(today);
+    }
+
     private ArrayList<ExcelDataInfo> excelData(List<Invoice> invoices) {
         ArrayList<ExcelDataInfo> excelSheetData = new ArrayList<>();
         int count = 1;
@@ -29,7 +36,7 @@ public class ExcelDataList {
                     .totalCost(invoice.getGrandTotal())
                     .paidAmount(invoice.getPaidAmount())
                     .pendingAmount(invoice.getDueBalance())
-                    .status(invoice.isDueClear() ? "Paid" : "Pending")
+                    .status((invoice.isDueClear() || invoice.getDueBalance() == 0) ? "Paid" : isDatePass(invoice.getInvoiceDetails().getDueDate()) ? "Overdue" : "Pending")
                     .build();
             excelSheetData.add(excelDataInfo);
 
