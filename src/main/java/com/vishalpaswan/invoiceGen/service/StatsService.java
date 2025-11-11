@@ -250,7 +250,7 @@ public class StatsService {
             // Calculate stats
             for (Invoice invoice : invoiceList) {
                 try {
-                    if (invoice.getDueBalance() == 0) {
+                    if (invoice.isDueClear() || invoice.getDueBalance() == 0) {
                         paidInvoice++;
                     } else {
                         String dueDateStr = invoice.getInvoiceDetails().getDueDate();
