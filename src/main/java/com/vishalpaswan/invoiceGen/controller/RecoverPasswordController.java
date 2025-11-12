@@ -3,7 +3,7 @@ package com.vishalpaswan.invoiceGen.controller;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.RecoverPasswordRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.UpdatePasswordRequest;
-import com.vishalpaswan.invoiceGen.service.RecoverPasswordService;
+import com.vishalpaswan.invoiceGen.service.recoverPasswordService.RecoverPasswordService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,19 +18,27 @@ public class RecoverPasswordController {
 
     // find user
     @PostMapping("/recover-password")
-    public ResponseEntity<?> findUser(@Valid @RequestBody RecoverPasswordRequest recoverPasswordRequest) {
+    public ResponseEntity<?> findUser(
+            @Valid @RequestBody RecoverPasswordRequest recoverPasswordRequest
+    ) {
         return recoverPasswordService.findUser(recoverPasswordRequest);
     }
 
     // verify otp
     @PostMapping("/{userId}/verify-otp")
-    public ResponseEntity<?> verifyUserOtp(@RequestBody OtpRequest otpRequest, @PathVariable String userId) {
+    public ResponseEntity<?> verifyUserOtp(
+            @RequestBody OtpRequest otpRequest,
+            @PathVariable String userId
+    ) {
         return recoverPasswordService.verifyUserOtp(otpRequest, userId);
     }
 
     // update password
     @PostMapping("/{userId}/update-password")
-    public ResponseEntity<?> updatePassword(@RequestBody UpdatePasswordRequest updatePasswordRequest, @PathVariable String userId) {
+    public ResponseEntity<?> updatePassword(
+            @RequestBody UpdatePasswordRequest updatePasswordRequest,
+            @PathVariable String userId
+    ) {
         return recoverPasswordService.updatePassword(updatePasswordRequest, userId);
     }
 

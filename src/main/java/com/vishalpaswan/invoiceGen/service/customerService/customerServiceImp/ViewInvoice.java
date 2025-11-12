@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.service;
+package com.vishalpaswan.invoiceGen.service.customerService.customerServiceImp;
 
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.responseDTO.InvoiceResponse;
@@ -17,12 +17,11 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CustomerService {
+public class ViewInvoice {
     private final InvoiceRepository invoiceRepository;
     private final InvoiceResponseMapper invoiceResponseMapper;
 
-    // view invoice for customers
-    public ResponseEntity<?> customerInvoiceView(String invoiceId) {
+    private ResponseEntity<?> customerInvoiceView(String invoiceId) {
         try {
             // Validate input
             if (invoiceId == null || invoiceId.isBlank()) {
@@ -66,5 +65,9 @@ public class CustomerService {
             log.error("Unexpected error while fetching invoice {}: {}", invoiceId, ex.getMessage(), ex);
             return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
+    }
+
+    public ResponseEntity<?> getInvoice(String invoiceId) {
+        return customerInvoiceView(invoiceId);
     }
 }

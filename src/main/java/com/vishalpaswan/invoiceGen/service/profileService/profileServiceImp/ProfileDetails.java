@@ -1,4 +1,4 @@
-package com.vishalpaswan.invoiceGen.service;
+package com.vishalpaswan.invoiceGen.service.profileService.profileServiceImp;
 
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.responseDTO.ProfileResponse;
@@ -19,12 +19,11 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProfileService {
+public class ProfileDetails {
     private final UserRepository userRepository;
     private final CompaniesRepository companiesRepository;
 
-    // get profile details
-    public ResponseEntity<?> getProfileDetails(String ownerId) {
+    private ResponseEntity<?> getProfileDetails(String ownerId) {
         try {
             if (ownerId == null || ownerId.isBlank()) {
                 log.warn("Invalid request: ownerId is null/blank");
@@ -72,4 +71,9 @@ public class ProfileService {
             return ResponseBuilder.error(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred. Please try again later.");
         }
     }
+
+    public ResponseEntity<?> getProfile(String ownerId) {
+        return getProfileDetails(ownerId);
+    }
+
 }

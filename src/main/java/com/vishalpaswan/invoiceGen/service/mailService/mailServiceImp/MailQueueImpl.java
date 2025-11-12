@@ -1,10 +1,7 @@
-package com.vishalpaswan.invoiceGen.service;
+package com.vishalpaswan.invoiceGen.service.mailService.mailServiceImp;
 
 import com.vishalpaswan.invoiceGen.dto.responseDTO.MailQueueItems;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,31 +12,27 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@RequiredArgsConstructor
 @Slf4j
 @Service
 public class MailQueueImpl {
     private final Queue<MailQueueItems> failedMailQueue = new LinkedList<>();
     @Autowired
-    private SendEmailService sendEmailService;
+    private InvoiceMailTemplate sendInvoiceMail;
     private final int maxReTry = 3;
 
-    public void addFailedMailToQueue(MailQueueItems retryMail) {
+    private void addFailedMailToQueue(MailQueueItems retryMail) {
         log.info("Adding failed mail to queue.");
         failedMailQueue.add(retryMail);
     }
 
-    @Scheduled(fixedDelay = 300000)
-    public void reSendFailedMail() {
+    private void reSendFailedMail() {
         log.info("Checking mail queue for retry. Pending mails: {}", failedMailQueue.size());
         List<MailQueueItems> failedAgain = new ArrayList<>();
         while (!failedMailQueue.isEmpty()) {
             MailQueueItems mailData = failedMailQueue.poll();
             try {
-                sendEmailService.sendInvoiceLinkMail(
+                sendInvoiceMail.sendInvoiceLink(
                         mailData.getSender(),
                         mailData.getReceiver(),
                         mailData.getInvoiceUrl(),
@@ -57,6 +50,15 @@ public class MailQueueImpl {
             }
         }
         failedMailQueue.addAll(failedAgain);
+    }
+
+    public void addMailToQueue(MailQueueItems retryMail) {
+        addFailedMailToQueue(retryMail);
+    }
+
+    @Scheduled(fixedDelay = 900000)
+    public void sendFailedMail() {
+        reSendFailedMail();
     }
 
 }

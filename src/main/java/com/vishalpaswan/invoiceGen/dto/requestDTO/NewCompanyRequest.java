@@ -1,6 +1,7 @@
 package com.vishalpaswan.invoiceGen.dto.requestDTO;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,6 +31,7 @@ public class NewCompanyRequest {
 
     @Valid
     @NotBlank(message = "Email is missing.")
+    @Email(message = "Invalid email.")
     private String email;
 
 }

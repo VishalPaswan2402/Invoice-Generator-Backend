@@ -1,26 +1,27 @@
 package com.vishalpaswan.invoiceGen.controller;
 
 import com.vishalpaswan.invoiceGen.security.Authorize;
-import com.vishalpaswan.invoiceGen.service.profileService.ProfileService;
+import com.vishalpaswan.invoiceGen.service.mailService.MailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/invoice-gen/api")
 @RequiredArgsConstructor
+@RequestMapping("/invoice-gen/api")
 @CrossOrigin("*")
-public class ProfileController {
-    private final ProfileService profileService;
+public class MailController {
+    private final MailService mailService;
     private final Authorize authorize;
 
-    @GetMapping("/{ownerId}/profile")
-    public ResponseEntity<?> getProfileDetails(
+    @GetMapping("/{ownerId}/{invoiceId}/invoiceMail")
+    public ResponseEntity<?> sendInvoiceMail(
             @PathVariable String ownerId,
+            @PathVariable String invoiceId,
             @RequestHeader("Authorization") String authHeader
     ) {
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
-        return authResult != null ? authResult : profileService.getProfileDetails(ownerId);
+        return authResult != null ? authResult : mailService.sendInvoiceLinkOnMail(ownerId, invoiceId);
     }
 
 }
