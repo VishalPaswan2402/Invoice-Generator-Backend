@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class OtpService {
     private static final SecureRandom secureRandom = new SecureRandom();
-    private static final int OTP_EXPIRY_MINUTES = 1;
+    private static final int OTP_EXPIRY_MINUTES = 5;
 
     // cache for OTP storage
     private final Cache<String, OtpStore> otpCache = Caffeine.newBuilder()

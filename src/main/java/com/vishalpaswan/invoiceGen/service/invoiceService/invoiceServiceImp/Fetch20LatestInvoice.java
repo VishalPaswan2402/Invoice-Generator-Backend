@@ -47,13 +47,13 @@ public class Fetch20LatestInvoice {
             Users user = userOpt.get();
 
             // Check if user has a company
-            if (user.getTotalCompany() == 0 || user.getCompanies().isEmpty()) {
+            if (user.getTotalCompany() == 0 || user.getCompanies() == null) {
                 log.warn("User {} has no associated company", ownerId);
-                return ResponseBuilder.error(HttpStatus.CONFLICT, "No company found. Please create your company first.");
+                return ResponseBuilder.error(HttpStatus.NOT_FOUND, "No company found. Please create your company first.");
             }
 
             // Fetch company's latest invoices
-            String companyId = user.getCompanies().getFirst().getId();
+            String companyId = user.getCompanies().getId();
             Pageable topTwenty = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "id"));
             Page<Invoice> invoicePage = invoiceRepository.findByCompanyId(companyId, topTwenty);
             List<Invoice> latestInvoices = invoicePage.getContent();

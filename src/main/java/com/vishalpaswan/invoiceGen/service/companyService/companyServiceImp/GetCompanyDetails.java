@@ -4,6 +4,7 @@ import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.responseDTO.CompanyResponse;
 import com.vishalpaswan.invoiceGen.entity.Companies;
 import com.vishalpaswan.invoiceGen.entity.Users;
+import com.vishalpaswan.invoiceGen.inputValidationCheck.GenerateInvNumber;
 import com.vishalpaswan.invoiceGen.mappersUtills.CompanyResponseMapper;
 import com.vishalpaswan.invoiceGen.repository.CompaniesRepository;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
@@ -58,6 +59,8 @@ public class GetCompanyDetails {
             Users user = userOpt.get();
             CompanyResponse companyResponse = companyResponseMapper.mapToCompanyResponse(companyData);
             companyResponse.setTotalInvoice(user.getTotalInvoices());
+            String nextInvoiceNumber = GenerateInvNumber.generateInvoiceNumber(user.getTotalInvoices() + 1);
+            companyResponse.setNextInvoiceNumber(nextInvoiceNumber);
 
             log.info("Company details retrieved successfully for companyId={} by user={}", companyId, ownerId);
             return ResponseBuilder.success(HttpStatus.OK, "Company details retrieved successfully.", companyResponse);

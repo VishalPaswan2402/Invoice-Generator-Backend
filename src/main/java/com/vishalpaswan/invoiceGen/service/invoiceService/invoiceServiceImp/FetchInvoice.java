@@ -56,9 +56,7 @@ public class FetchInvoice {
             }
 
             // Validate ownership
-            boolean ownsCompany = user.get().getCompanies()
-                    .stream()
-                    .anyMatch(c -> c.getId().equals(company.getId()));
+            boolean ownsCompany = user.get().getCompanies().getId().equals(company.getId());
 
             if (!ownsCompany) {
                 log.warn("Unauthorized access attempt by user {} for invoice {}", userId, invoiceId);

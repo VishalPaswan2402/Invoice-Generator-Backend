@@ -17,4 +17,5 @@ public class CompanyResponse {
     private String address;
     private String email;
     private long totalInvoice;
+    private String nextInvoiceNumber;
 }

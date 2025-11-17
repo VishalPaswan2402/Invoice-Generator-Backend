@@ -51,11 +51,11 @@ public class ChangePassword {
             }
 
             if (updatePasswordRequest.getPassword().isBlank()) {
-                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Password cannot be blank.");
+                return ResponseBuilder.error(HttpStatus.PARTIAL_CONTENT, "Password cannot be blank.");
             }
 
             if (!updatePasswordRequest.getPassword().equals(updatePasswordRequest.getConfirmPassword())) {
-                return ResponseBuilder.error(HttpStatus.UNPROCESSABLE_ENTITY, "Passwords do not match.");
+                return ResponseBuilder.error(HttpStatus.PARTIAL_CONTENT, "Passwords do not match.");
             }
 
             Users user = findUser.get();

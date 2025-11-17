@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -40,26 +39,28 @@ public class ProfileDetails {
             profileResponse.setUsername(owner.getUsername());
             profileResponse.setUserEmail(owner.getEmail());
 
-            List<Companies> companiesList = companiesRepository.findAllByOwnerId(ownerId);
+            String companyId = owner.getCompanies().getId();
 
-            if (companiesList.isEmpty()) {
+            Optional<Companies> companies = companiesRepository.findById(companyId);
+
+            if (companies.isEmpty()) {
                 // You can decide to either return an empty list or a message
                 profileResponse.getCompany().add(null);
                 return ResponseBuilder.success(HttpStatus.OK, "No companies found for this user.", profileResponse);
             }
-
-            for (Companies comp : companiesList) {
-                ProfileResponse.Company currCompany = new ProfileResponse.Company(
-                        comp.getId(),
-                        comp.getCompanyName(),
-                        comp.getOwnerName(),
-                        comp.getEmail(),
-                        comp.getContact(),
-                        comp.getAddress(),
-                        0 // invoice count placeholder
-                );
-                profileResponse.getCompany().add(currCompany);
-            }
+            Companies company = companies.get();
+//            for (Companies comp : companiesList) {
+            ProfileResponse.Company currCompany = new ProfileResponse.Company(
+                    company.getId(),
+                    company.getCompanyName(),
+                    company.getOwnerName(),
+                    company.getEmail(),
+                    company.getContact(),
+                    company.getAddress(),
+                    owner.getTotalInvoices() // invoice count placeholder
+            );
+            profileResponse.getCompany().add(currCompany);
+//            }
 
             return ResponseBuilder.success(HttpStatus.OK, "User profile found.", profileResponse);
 

@@ -44,15 +44,13 @@ public class FetchAllInvoice {
             Users user = userOpt.get();
 
             // Check if user has company data
-            if (user.getTotalCompany() == 0 || user.getCompanies().isEmpty()) {
+            if (user.getTotalCompany() == 0 || user.getCompanies() == null) {
                 log.warn("User {} has no company registered", ownerId);
                 return ResponseBuilder.error(HttpStatus.CONFLICT, "No company found. Please create your company first.");
             }
 
             // Verify that the requested company belongs to this user
-            boolean ownsCompany = user.getCompanies()
-                    .stream()
-                    .anyMatch(c -> c.getId().equals(companyId));
+            boolean ownsCompany = user.getCompanies().getId().equals(companyId);
 
             if (!ownsCompany) {
                 log.warn("Unauthorized access attempt: user {} tried to access company {}", ownerId, companyId);

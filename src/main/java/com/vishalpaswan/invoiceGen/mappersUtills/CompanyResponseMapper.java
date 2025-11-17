@@ -8,5 +8,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface CompanyResponseMapper {
     @Mapping(target = "totalInvoice", ignore = true)
+    @Mapping(target = "nextInvoiceNumber", ignore = true)
     CompanyResponse mapToCompanyResponse(Companies companies);
 }

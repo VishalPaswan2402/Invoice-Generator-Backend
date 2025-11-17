@@ -51,13 +51,13 @@ public class VerifyOtp {
 
             // Validate OTP input
             if (otpRequest.getOtp() == null || otpRequest.getOtp().isBlank()) {
-                return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "OTP cannot be empty.");
+                return ResponseBuilder.error(HttpStatus.NON_AUTHORITATIVE_INFORMATION, "OTP cannot be empty.");
             }
 
             // Match OTP
             if (!otpRequest.getOtp().equals(otpData.getOtp())) {
                 log.warn("Incorrect OTP entered for userId={}", userId);
-                return ResponseBuilder.error(HttpStatus.UNAUTHORIZED, "Incorrect OTP. Please try again.");
+                return ResponseBuilder.error(HttpStatus.NON_AUTHORITATIVE_INFORMATION, "Incorrect OTP. Please try again.");
             }
 
             // OTP is valid → mark verified
@@ -72,7 +72,7 @@ public class VerifyOtp {
                     user.getEmail()
             );
 
-            return ResponseBuilder.success(HttpStatus.OK, "OTP successfully verified.", response);
+            return ResponseBuilder.success(HttpStatus.OK, "OTP verified successfully.", response);
 
         } catch (DataAccessException ex) {
             log.error("Database error while finding user: {}", ex.getMessage(), ex);

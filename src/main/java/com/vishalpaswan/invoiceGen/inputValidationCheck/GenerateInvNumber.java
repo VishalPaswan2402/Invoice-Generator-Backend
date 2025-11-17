@@ -11,7 +11,8 @@ public class GenerateInvNumber {
         LocalDate now = LocalDate.now();
         String year = String.valueOf(now.getYear()).substring(2);
         String month = String.format("%02d", now.getMonthValue());
-        String sequence = String.format("%03d", previousTotalInvoices + 1);
+        String sequence = String.format("%03d", previousTotalInvoices);
+        System.out.println("INv Um : " + "INV-" + year + month + sequence);
         return "INV-" + year + month + sequence;
     }
 }

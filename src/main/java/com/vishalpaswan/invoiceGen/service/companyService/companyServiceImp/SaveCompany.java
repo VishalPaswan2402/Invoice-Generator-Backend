@@ -56,7 +56,7 @@ public class SaveCompany {
 
             // Update user info
             currentUser.setTotalCompany(1);
-            currentUser.getCompanies().add(savedCompany);
+            currentUser.setCompanies(savedCompany);
             userRepository.save(currentUser);
 
             log.info("New company '{}' added successfully for user '{}'", newCompany.getCompanyName(), ownerId);

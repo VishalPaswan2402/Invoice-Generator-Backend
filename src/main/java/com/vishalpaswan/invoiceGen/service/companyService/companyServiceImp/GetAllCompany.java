@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -41,16 +40,16 @@ public class GetAllCompany {
             Users owner = userOpt.get();
 
             // Retrieve associated companies
-            List<Companies> companiesList = owner.getCompanies();
-            if (companiesList == null || companiesList.isEmpty()) {
+            Companies companiesList = owner.getCompanies();
+            if (companiesList == null) {
                 log.info("No companies found for user {}", ownerId);
                 return ResponseBuilder.error(HttpStatus.NOT_FOUND, "No company found.");
             }
 
             // Map to DTO/Response model
-            List<AllCompanyList> companyResponses = allCompanyMapper.mapToAllCompanyList(companiesList);
+            AllCompanyList companyResponses = allCompanyMapper.mapToAllCompanyList(companiesList);
 
-            log.info("Retrieved {} companies for user {}", companyResponses.size(), ownerId);
+            log.info("Retrieved companies data for user {}", ownerId);
             return ResponseBuilder.success(HttpStatus.OK, "Retrieved companies data.", companyResponses);
 
         } catch (DataAccessException ex) {
