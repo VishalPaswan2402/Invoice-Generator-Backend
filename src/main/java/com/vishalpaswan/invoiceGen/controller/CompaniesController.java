@@ -1,5 +1,6 @@
 package com.vishalpaswan.invoiceGen.controller;
 
+import com.vishalpaswan.invoiceGen.dto.requestDTO.EditCompanyRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.NewCompanyRequest;
 import com.vishalpaswan.invoiceGen.security.Authorize;
 import com.vishalpaswan.invoiceGen.service.companyService.CompanyService;
@@ -46,6 +47,18 @@ public class CompaniesController {
     ) {
         ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
         return authResult != null ? authResult : companiesService.getAllCompany(ownerId);
+    }
+
+    // edit company details
+    @PostMapping("/{ownerId}/{companyId}/edit-company")
+    public ResponseEntity<?> editCompanyDetails(
+            @Valid @RequestBody EditCompanyRequest editCompanyRequest,
+            @PathVariable String ownerId,
+            @PathVariable String companyId,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
+        return authResult != null ? authResult : companiesService.updateCompanyDetails(editCompanyRequest, ownerId, companyId);
     }
 
 }

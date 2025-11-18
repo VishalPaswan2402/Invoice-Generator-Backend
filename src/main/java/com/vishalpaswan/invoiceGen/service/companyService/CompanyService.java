@@ -1,6 +1,8 @@
 package com.vishalpaswan.invoiceGen.service.companyService;
 
+import com.vishalpaswan.invoiceGen.dto.requestDTO.EditCompanyRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.NewCompanyRequest;
+import com.vishalpaswan.invoiceGen.service.companyService.companyServiceImp.EditCompanyDetails;
 import com.vishalpaswan.invoiceGen.service.companyService.companyServiceImp.GetAllCompany;
 import com.vishalpaswan.invoiceGen.service.companyService.companyServiceImp.GetCompanyDetails;
 import com.vishalpaswan.invoiceGen.service.companyService.companyServiceImp.SaveCompany;
@@ -16,6 +18,7 @@ public class CompanyService {
     private final SaveCompany saveCompany;
     private final GetCompanyDetails getDetails;
     private final GetAllCompany getAll;
+    private final EditCompanyDetails editCompanyDetails;
 
     // save new company
     public ResponseEntity<?> saveNewCompanyData(NewCompanyRequest companyRequest, String ownerId) {
@@ -31,4 +34,10 @@ public class CompanyService {
     public ResponseEntity<?> getAllCompany(String ownerId) {
         return getAll.allCompany(ownerId);
     }
+
+    // edit company details
+    public ResponseEntity<?> updateCompanyDetails(EditCompanyRequest editCompanyRequest, String ownerId, String companyId) {
+        return editCompanyDetails.editCompany(editCompanyRequest, ownerId, companyId);
+    }
+
 }
