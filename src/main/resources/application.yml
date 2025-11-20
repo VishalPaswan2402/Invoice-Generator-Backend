@@ -12,8 +12,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.ethereal.email}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:terrance.bednar52@ethereal.email}
-    password: ${SPRING_MAIL_PASSWORD:z9mYaAGAP7pVFEeYk5}
+    username: ${SPRING_MAIL_USERNAME:dolly.kunde@ethereal.email}
+    password: ${SPRING_MAIL_PASSWORD:CadQTkyjmBM2w316vq}
     properties:
       mail:
         smtp:

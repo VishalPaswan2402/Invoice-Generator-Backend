@@ -3,7 +3,7 @@ package com.vishalpaswan.invoiceGen.service.recoverPasswordService.recoverPasswo
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
 import com.vishalpaswan.invoiceGen.dto.responseDTO.OtpStore;
-import com.vishalpaswan.invoiceGen.dto.responseDTO.PasswordRecoverUserInfo;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.VerifyingUserInfo;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +66,7 @@ public class VerifyOtp {
 
             log.info("OTP successfully verified for userId={}", userId);
 
-            PasswordRecoverUserInfo response = new PasswordRecoverUserInfo(
+            VerifyingUserInfo response = new VerifyingUserInfo(
                     userId,
                     user.getUsername(),
                     user.getEmail()

@@ -3,7 +3,7 @@ package com.vishalpaswan.invoiceGen.service.recoverPasswordService.recoverPasswo
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.RecoverPasswordRequest;
 import com.vishalpaswan.invoiceGen.dto.responseDTO.OtpStore;
-import com.vishalpaswan.invoiceGen.dto.responseDTO.PasswordRecoverUserInfo;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.VerifyingUserInfo;
 import com.vishalpaswan.invoiceGen.entity.Users;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
 import com.vishalpaswan.invoiceGen.service.mailService.mailServiceImp.OtpMailTemplate;
@@ -61,7 +61,7 @@ public class UserExist {
 
             log.info("OTP successfully sent to email: {}", user.getEmail());
 
-            PasswordRecoverUserInfo userInfo = new PasswordRecoverUserInfo(
+            VerifyingUserInfo userInfo = new VerifyingUserInfo(
                     user.getId(),
                     user.getUsername(),
                     user.getEmail()

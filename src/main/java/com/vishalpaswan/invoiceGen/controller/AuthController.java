@@ -1,6 +1,7 @@
 package com.vishalpaswan.invoiceGen.controller;
 
 import com.vishalpaswan.invoiceGen.dto.requestDTO.LoginRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.SignupRequest;
 import com.vishalpaswan.invoiceGen.service.authService.AuthService;
 import jakarta.validation.Valid;
@@ -30,4 +31,13 @@ public class AuthController {
     ) {
         return authService.signupUser(signupRequest);
     }
+
+    // verify signup otp
+    @PostMapping("/signup/verify-otp")
+    public ResponseEntity<?> verifySignupOtp(
+            @Valid @RequestBody OtpRequest otpRequest
+    ) {
+        return authService.verifyOtp(otpRequest);
+    }
+
 }

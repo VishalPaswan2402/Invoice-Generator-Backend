@@ -1,9 +1,11 @@
 package com.vishalpaswan.invoiceGen.service.authService;
 
 import com.vishalpaswan.invoiceGen.dto.requestDTO.LoginRequest;
+import com.vishalpaswan.invoiceGen.dto.requestDTO.OtpRequest;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.SignupRequest;
 import com.vishalpaswan.invoiceGen.service.authService.authServiceImp.Login;
 import com.vishalpaswan.invoiceGen.service.authService.authServiceImp.Signup;
+import com.vishalpaswan.invoiceGen.service.authService.authServiceImp.VerifyOtpAndSaveUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final Login login;
     private final Signup signup;
+    private final VerifyOtpAndSaveUser verifyOtpAndSaveUser;
 
     // login user
     public ResponseEntity<?> loginUser(LoginRequest loginRequest) {
@@ -24,6 +27,11 @@ public class AuthService {
     // signup new account
     public ResponseEntity<?> signupUser(SignupRequest signupRequest) {
         return signup.signupUser(signupRequest);
+    }
+
+    // verify signup otp
+    public ResponseEntity<?> verifyOtp(OtpRequest otpRequest) {
+        return verifyOtpAndSaveUser.saveNewUser(otpRequest);
     }
 
 }

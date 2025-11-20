@@ -2,29 +2,29 @@ package com.vishalpaswan.invoiceGen.service.authService.authServiceImp;
 
 import com.vishalpaswan.invoiceGen.apiUtility.ResponseBuilder;
 import com.vishalpaswan.invoiceGen.dto.requestDTO.SignupRequest;
-import com.vishalpaswan.invoiceGen.dto.responseDTO.LoginResponse;
-import com.vishalpaswan.invoiceGen.entity.Users;
+import com.vishalpaswan.invoiceGen.dto.responseDTO.VerifyingUserInfo;
 import com.vishalpaswan.invoiceGen.repository.UserRepository;
-import com.vishalpaswan.invoiceGen.security.AuthUtils;
+import com.vishalpaswan.invoiceGen.service.mailService.mailServiceImp.SignupOtpTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class Signup {
-    private final AuthenticationManager authenticationManager;
-    private final AuthUtils authUtils;
+    @Value("${spring.mail.username}")
+    private String siteEmail;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final SignupOtpService signupOtpService;
+    private final SignupOtpTemplate signupOtpTemplate;
 
     private ResponseEntity<?> userSignup(SignupRequest signupRequest) {
         try {
@@ -38,32 +38,17 @@ public class Signup {
                 return ResponseBuilder.error(HttpStatus.BAD_REQUEST, "Username already exists.");
             }
 
-            // Save user with encoded password
-            Users savedUser = userRepository.save(
-                    Users.builder()
-                            .username(signupRequest.getUsername())
-                            .password(passwordEncoder.encode(signupRequest.getPassword()))
-                            .email(signupRequest.getEmail())
-                            .build()
-            );
+            String signupId = UUID.randomUUID().toString();
+            String signupOtp = signupOtpService.generateSignupOtp();
 
-            // Authenticate newly created user
-            var authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(savedUser.getUsername(), signupRequest.getPassword())
-            );
+            signupOtpService.storeSignupData(signupId, signupRequest);
+            signupOtpService.storeSignupOtp(signupId, signupOtp);
 
-            Users user = (Users) authentication.getPrincipal();
-            String token = authUtils.generateAccessToken(user);
+            // send otp mail
+            signupOtpTemplate.sendSignupOtp(siteEmail, signupRequest.getEmail(), signupOtp);
 
-            // Build response
-            LoginResponse signupResponse = LoginResponse.builder()
-                    .jwt(token)
-                    .userId(user.getId())
-                    .username(user.getUsername())
-                    .email(user.getEmail())
-                    .build();
-
-            return ResponseBuilder.success(HttpStatus.CREATED, "Account created successfully.", signupResponse);
+            VerifyingUserInfo signupOtpVerify = new VerifyingUserInfo(signupId, signupRequest.getUsername(), signupRequest.getEmail());
+            return ResponseBuilder.success(HttpStatus.OK, "OTP sent successfully.", signupOtpVerify);
 
         } catch (BadCredentialsException e) {
             log.warn("Invalid credentials provided during signup: {}", e.getMessage());
