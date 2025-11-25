@@ -53,7 +53,7 @@ Export invoice reports for:
 
 ### 📌 Email Retry Logic (Queue-Based – Every 30 Minutes)
 
-    ```bash
+```bash
 
     Send Email
     │
@@ -68,7 +68,7 @@ Export invoice reports for:
          ┌───────────┴───────────┐
      ✔ Success              ✖ Failed after 3 attempts
 
-    ```
+```
 
 ## 🛠️ Tech Stack
 
@@ -85,7 +85,7 @@ Export invoice reports for:
 
 ## 🖥️ Project Structure
 
-    ```bash
+```bash
 
     Invoice-Generator-Backend/
     │
@@ -111,7 +111,7 @@ Export invoice reports for:
     ├── pom.xml                             # Maven dependencies
     └── README.md                           # Project documentation
 
-    ```
+```
 
 ## Installation
 
