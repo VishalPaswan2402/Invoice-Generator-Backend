@@ -83,4 +83,16 @@ public class InvoiceController {
         return authResult != null ? authResult : invoiceService.updateInvoice(newInvoice, ownerId, invoiceId);
     }
 
+    // fetch all invoice page wise
+    @GetMapping("/{ownerId}/{invoiceId}/{page}/fetch-invoice")
+    public ResponseEntity<?> fetchInvoiceByPage(
+            @PathVariable String ownerId,
+            @PathVariable String invoiceId,
+            @PathVariable int page,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
+        return authResult != null ? authResult : invoiceService.pagewiseInvoiceFetch(ownerId, invoiceId, page);
+    }
+
 }
