@@ -95,4 +95,16 @@ public class InvoiceController {
         return authResult != null ? authResult : invoiceService.pagewiseInvoiceFetch(ownerId, invoiceId, page);
     }
 
+    // search invoice by query
+    @GetMapping("/{ownerId}/{companyId}/{query}/search-invoice")
+    public ResponseEntity<?> searchInvoiceByQuery(
+            @PathVariable String ownerId,
+            @PathVariable String companyId,
+            @PathVariable String query,
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        ResponseEntity<?> authResult = authorize.isAuthorizes(authHeader, ownerId);
+        return authResult != null ? authResult : invoiceService.searchFromInvoice(query, ownerId, companyId);
+    }
+
 }

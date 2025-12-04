@@ -18,6 +18,7 @@ public class InvoiceService {
     private final DestroyInvoice destroyInvoice;
     private final UpdatingInvoice updatingInvoice;
     private final FetchLazyInvoice fetchLazyInvoice;
+    private final SearchInvoice searchInvoice;
 
     // save new invoice
     public ResponseEntity<?> saveNewInvoice(InvoiceRequest invoiceRequest, String companyOwnerId) {
@@ -52,6 +53,11 @@ public class InvoiceService {
     // lazy invoice fetch
     public ResponseEntity<?> pagewiseInvoiceFetch(String ownerId, String companyId, int page) {
         return fetchLazyInvoice.getLazyInvoiceFetch(ownerId, companyId, page);
+    }
+
+    // search invoice by query
+    public ResponseEntity<?> searchFromInvoice(String searchQuery, String ownerId, String companyId) {
+        return searchInvoice.searchInvoiceByQuery(searchQuery, ownerId, companyId);
     }
 
 }
