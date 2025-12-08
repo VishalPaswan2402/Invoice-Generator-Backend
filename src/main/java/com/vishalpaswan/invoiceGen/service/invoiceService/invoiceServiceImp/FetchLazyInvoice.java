@@ -61,7 +61,7 @@ public class FetchLazyInvoice {
             // Fetch invoices for the company
             int size = 20;
             PageRequest pageable = PageRequest.of(page, size, Sort.by("id").descending());
-            Page<Invoice> fetchedInvoices = invoiceRepository.findAll(pageable);
+            Page<Invoice> fetchedInvoices = invoiceRepository.findByCompanyId(companyId, pageable);
 
             // convert to response
             List<InvoiceResponse> invoiceResult = fetchedInvoices.getContent().stream()
